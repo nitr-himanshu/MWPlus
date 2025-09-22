@@ -20,6 +20,28 @@
 <resources>
     <string name="app_name">MoneyWallet</string>
 
+    <!-- Fingerprint Authentication -->
+    <string name="fingerprint_icon_description">Fingerprint icon</string>
+    <string name="fingerprint_unlock_message">Use your fingerprint to unlock the app</string>
+    <string name="fingerprint_disable_message">Use your fingerprint to disable app lock</string>
+    <string name="fingerprint_enable_message">Use your fingerprint to enable app lock</string>
+    <string name="fingerprint_change_key_message">Use your fingerprint to change security settings</string>
+    <string name="fingerprint_change_mode_message">Use your fingerprint to change lock mode</string>
+    <string name="fingerprint_unlock">Unlock with Fingerprint</string>
+    <string name="fingerprint_disable">Disable with Fingerprint</string>
+    <string name="fingerprint_enable">Enable with Fingerprint</string>
+    <string name="fingerprint_change_key">Change with Fingerprint</string>
+    <string name="fingerprint_change_mode">Change Mode with Fingerprint</string>
+    <string name="fingerprint_auth_title">Biometric Authentication</string>
+    <string name="fingerprint_auth_subtitle">Use your biometric to authenticate</string>
+    <string name="fingerprint_not_recognized">Fingerprint not recognized. Please try again.</string>
+    <string name="fingerprint_error_no_hardware">No fingerprint hardware available on this device</string>
+    <string name="fingerprint_error_hw_unavailable">Fingerprint hardware is currently unavailable</string>
+    <string name="fingerprint_error_none_enrolled">No fingerprints enrolled. Please add a fingerprint in Settings.</string>
+    <string name="fingerprint_error_unknown">Unknown fingerprint error occurred</string>
+    <string name="fingerprint_error_lockout">Too many failed attempts. Please try again later.</string>
+    <string name="cancel">Cancel</string>
+
     <string name="menu_transaction">"Transactions"</string>
     <string name="menu_category">"Categories"</string>
     <string name="menu_overview">"Overview"</string>
@@ -703,5 +725,16 @@
     <string name="activity_donation_action_contribute_title">"Contribute"</string>
     <string name="activity_donation_action_contribute_content">"The source code is public and everyone can collaborate"</string>
     <string name="activity_donation_final_content">"Every contribution, monetary or non-monetary, is equal and make substantial difference for me. Hope you enjoy it and thanks again for choosing to use this application."</string>
+
+    <!-- Icon Picker Options -->
+    <string-array name="icon_picker_options_color">
+        <item>Select Icon</item>
+        <item>Change Background Color</item>
+    </string-array>
+    
+    <string-array name="icon_picker_options_vector">
+        <item>Change Icon</item>
+        <item>Remove Icon</item>
+    </string-array>
 
 </resources>

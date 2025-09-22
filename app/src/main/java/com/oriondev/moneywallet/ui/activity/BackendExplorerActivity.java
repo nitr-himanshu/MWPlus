@@ -155,8 +155,8 @@ public class BackendExplorerActivity extends SinglePanelActivity implements Swip
 
     @Override
     public boolean onMenuItemClick(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_select_folder:
+        int itemId = item.getItemId();
+        if (itemId == R.id.action_select_folder) {
                 if (mActivityMode == MODE_FOLDER_PICKER) {
                     IFile folder = getCurrentFolder();
                     if (folder == null) {
@@ -168,7 +168,6 @@ public class BackendExplorerActivity extends SinglePanelActivity implements Swip
                     setResult(RESULT_OK, intent);
                     finish();
                 }
-                break;
         }
         return false;
     }

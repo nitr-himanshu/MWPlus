@@ -61,7 +61,6 @@
             app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintLeft_toLeftOf="parent"
-            app:keypadTextSize="@dimen/activity_lock_pin_lock_view_text_size"
             app:theme_backgroundColor="colorPrimary" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

@@ -20,7 +20,7 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="MoneyWalletAppTheme" parent="MaterialDrawerTheme.Light.DarkToolbar">
+    <style name="MoneyWalletAppTheme" parent="Theme.Material3.DayNight">
         <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>

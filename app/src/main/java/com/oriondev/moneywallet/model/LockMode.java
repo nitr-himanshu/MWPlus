@@ -26,10 +26,11 @@ import com.oriondev.moneywallet.storage.preference.PreferenceManager;
  */
 public enum LockMode {
 
-    NONE(PreferenceManager.LOCK_MODE_NONE),
+    DISABLED(PreferenceManager.LOCK_MODE_NONE),
     PIN(PreferenceManager.LOCK_MODE_PIN),
     SEQUENCE(PreferenceManager.LOCK_MODE_SEQUENCE),
-    FINGERPRINT(PreferenceManager.LOCK_MODE_FINGERPRINT);
+    FINGERPRINT(PreferenceManager.LOCK_MODE_FINGERPRINT),
+    BIOMETRIC(PreferenceManager.LOCK_MODE_FINGERPRINT);
 
     private final int mValue;
 
@@ -52,9 +53,9 @@ public enum LockMode {
             case PreferenceManager.LOCK_MODE_SEQUENCE:
                 return SEQUENCE;
             case PreferenceManager.LOCK_MODE_FINGERPRINT:
-                return FINGERPRINT;
+                return BIOMETRIC; // Use BIOMETRIC instead of FINGERPRINT
             default:
-                return NONE;
+                return DISABLED;
         }
     }
 }

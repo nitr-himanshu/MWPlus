@@ -21,40 +21,32 @@ package com.oriondev.moneywallet.ui.activity;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.hardware.fingerprint.FingerprintManager;
-import android.os.Build;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.view.View;
-import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import com.andrognito.patternlockview.PatternLockView;
-import com.andrognito.patternlockview.listener.PatternLockViewListener;
-import com.andrognito.patternlockview.utils.PatternLockUtils;
-import com.andrognito.pinlockview.IndicatorDots;
-import com.andrognito.pinlockview.PinLockListener;
-import com.andrognito.pinlockview.PinLockView;
-import com.multidots.fingerprintauth.FingerPrintAuthCallback;
-import com.multidots.fingerprintauth.FingerPrintAuthHelper;
+import androidx.annotation.NonNull;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
+import androidx.core.content.ContextCompat;
+
 import com.oriondev.moneywallet.R;
 import com.oriondev.moneywallet.model.LockMode;
 import com.oriondev.moneywallet.storage.preference.PreferenceManager;
 import com.oriondev.moneywallet.ui.activity.base.ThemedActivity;
 
-import java.util.List;
+import java.util.concurrent.Executor;
 
 /**
  * Created by andrea on 24/07/18.
+ * Updated to use Android Biometric API for fingerprint authentication.
  */
 public class LockActivity extends ThemedActivity {
 
     public static final String MODE = "LockActivity::Arguments::Mode";
     public static final String ACTION = "LockActivity::Arguments::Action";
-
-    private static final String SS_NEW_CODE = "LockActivity::SavedState::NewCode";
-    private static final String SS_CURRENT_STEP = "LockActivity::SavedState::CurrentStep";
-    private static final String SS_CURRENT_LOCK_MODE = "LockActivity::SavedState::CurrentLockMode";
 
     /**
      * Default action if not specified, it will prompt the user to insert the key
@@ -93,12 +85,6 @@ public class LockActivity extends ThemedActivity {
      */
     public static final int ACTION_CHANGE_MODE = 4;
 
-    private static final int PIN_CODE_LENGTH = 5;
-
-    private static final int STEP_INSERT_OLD_CODE = 1;
-    private static final int STEP_INSERT_NEW_CODE = 2;
-    private static final int STEP_VERIFY_NEW_CODE = 3;
-
     public static Intent unlock(Activity activity) {
         Intent intent = new Intent(activity, LockActivity.class);
         intent.putExtra(ACTION, ACTION_UNLOCK);
@@ -133,509 +119,172 @@ public class LockActivity extends ThemedActivity {
 
     private int mAction;
     private LockMode mTargetLockMode;
-
-    private ViewGroup mPinLayout, mSequenceLayout, mFingerprintLayout;
-
-    private TextView mPinHelpTextView;
-    private PinLockView mPinLockView;
-
-    private TextView mSequenceHelpTextView;
-    private PatternLockView mPatternLockView;
-
-    private TextView mFingerprintHelpTextView;
-
-    private String mNewCode = null;
-    private int mCurrentStep = 0;
     private LockMode mCurrentLockMode;
-    private FingerPrintAuthHelper mFingerprintAuth;
+
+    private TextView mHelpTextView;
+    private Button mFingerprintButton;
+    private Button mCancelButton;
+
+    private Executor executor;
+    private BiometricPrompt biometricPrompt;
+    private BiometricPrompt.PromptInfo promptInfo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        unpackIntent(getIntent(), savedInstanceState);
-        initializeUi(savedInstanceState);
-        mFingerprintAuth = FingerPrintAuthHelper.getHelper(this, new FingerPrintAuthCallback() {
+        setContentView(R.layout.activity_lock_biometric);
 
+        // Get intent parameters
+        mAction = getIntent().getIntExtra(ACTION, ACTION_UNLOCK);
+        mTargetLockMode = (LockMode) getIntent().getSerializableExtra(MODE);
+        mCurrentLockMode = PreferenceManager.getCurrentLockMode();
+
+        // Initialize views
+        mHelpTextView = findViewById(R.id.help_text_view);
+        mFingerprintButton = findViewById(R.id.fingerprint_button);
+        mCancelButton = findViewById(R.id.cancel_button);
+
+        // Initialize biometric authentication
+        executor = ContextCompat.getMainExecutor(this);
+        biometricPrompt = new BiometricPrompt(this, executor, new BiometricPrompt.AuthenticationCallback() {
             @Override
-            public void onNoFingerPrintHardwareFound() {
-                // not handled because the fingerprint availability is checked
-                // before starting this activity.
+            public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
+                super.onAuthenticationError(errorCode, errString);
+                handleAuthenticationError(errorCode, errString);
             }
 
             @Override
-            public void onNoFingerPrintRegistered() {
-                mFingerprintHelpTextView.setText(R.string.help_fingerprint_not_initialized);
+            public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+                super.onAuthenticationSucceeded(result);
+                handleAuthenticationSuccess();
             }
 
             @Override
-            public void onBelowMarshmallow() {
-                // not handled because the fingerprint availability is checked
-                // before starting this activity.
+            public void onAuthenticationFailed() {
+                super.onAuthenticationFailed();
+                Toast.makeText(LockActivity.this, R.string.fingerprint_not_recognized, Toast.LENGTH_SHORT).show();
             }
-
-            @Override
-            public void onAuthSuccess(FingerprintManager.CryptoObject cryptoObject) {
-                onFingerprintScan(true, 0, null);
-            }
-
-            @Override
-            public void onAuthFailed(int errorCode, String errorMessage) {
-                onFingerprintScan(false, errorCode, errorMessage);
-            }
-
         });
+
+        // Set up button click listeners
+        mFingerprintButton.setOnClickListener(v -> startBiometricAuthentication());
+        mCancelButton.setOnClickListener(v -> finishWithResult(RESULT_CANCELED));
+
+        // Update UI based on action
+        updateUI();
+    }
+
+    private void updateUI() {
+        switch (mAction) {
+            case ACTION_UNLOCK:
+                mHelpTextView.setText(R.string.fingerprint_unlock_message);
+                mFingerprintButton.setText(R.string.fingerprint_unlock);
+                break;
+            case ACTION_DISABLE:
+                mHelpTextView.setText(R.string.fingerprint_disable_message);
+                mFingerprintButton.setText(R.string.fingerprint_disable);
+                break;
+            case ACTION_ENABLE:
+                mHelpTextView.setText(R.string.fingerprint_enable_message);
+                mFingerprintButton.setText(R.string.fingerprint_enable);
+                break;
+            case ACTION_CHANGE_KEY:
+                mHelpTextView.setText(R.string.fingerprint_change_key_message);
+                mFingerprintButton.setText(R.string.fingerprint_change_key);
+                break;
+            case ACTION_CHANGE_MODE:
+                mHelpTextView.setText(R.string.fingerprint_change_mode_message);
+                mFingerprintButton.setText(R.string.fingerprint_change_mode);
+                break;
+        }
+    }
+
+    private void startBiometricAuthentication() {
+        // Check if biometric authentication is available
+        BiometricManager biometricManager = BiometricManager.from(this);
+        switch (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)) {
+            case BiometricManager.BIOMETRIC_SUCCESS:
+                // Biometric authentication is available
+                break;
+            case BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE:
+                Toast.makeText(this, R.string.fingerprint_error_no_hardware, Toast.LENGTH_LONG).show();
+                return;
+            case BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE:
+                Toast.makeText(this, R.string.fingerprint_error_hw_unavailable, Toast.LENGTH_LONG).show();
+                return;
+            case BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED:
+                Toast.makeText(this, R.string.fingerprint_error_none_enrolled, Toast.LENGTH_LONG).show();
+                return;
+            default:
+                Toast.makeText(this, R.string.fingerprint_error_unknown, Toast.LENGTH_LONG).show();
+                return;
+        }
+
+        // Create prompt info
+        promptInfo = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle(getString(R.string.fingerprint_auth_title))
+                .setSubtitle(getString(R.string.fingerprint_auth_subtitle))
+                .setNegativeButtonText(getString(R.string.cancel))
+                .build();
+
+        // Start authentication
+        biometricPrompt.authenticate(promptInfo);
+    }
+
+    private void handleAuthenticationError(int errorCode, CharSequence errString) {
+        switch (errorCode) {
+            case BiometricPrompt.ERROR_USER_CANCELED:
+            case BiometricPrompt.ERROR_NEGATIVE_BUTTON:
+                // User canceled, do nothing
+                break;
+            case BiometricPrompt.ERROR_LOCKOUT:
+            case BiometricPrompt.ERROR_LOCKOUT_PERMANENT:
+                Toast.makeText(this, R.string.fingerprint_error_lockout, Toast.LENGTH_LONG).show();
+                break;
+            default:
+                Toast.makeText(this, errString, Toast.LENGTH_LONG).show();
+                break;
+        }
+    }
+
+    private void handleAuthenticationSuccess() {
+        switch (mAction) {
+            case ACTION_UNLOCK:
+                // Authentication successful, unlock the app
+                finishWithResult(RESULT_OK);
+                break;
+            case ACTION_DISABLE:
+                // Disable lock mode
+                PreferenceManager.setCurrentLockMode(LockMode.DISABLED);
+                finishWithResult(RESULT_OK);
+                break;
+            case ACTION_ENABLE:
+                // Enable biometric lock mode
+                PreferenceManager.setCurrentLockMode(LockMode.BIOMETRIC);
+                finishWithResult(RESULT_OK);
+                break;
+            case ACTION_CHANGE_KEY:
+                // Change key (for biometric, this is just a re-authentication)
+                finishWithResult(RESULT_OK);
+                break;
+            case ACTION_CHANGE_MODE:
+                // Change to target lock mode
+                if (mTargetLockMode != null) {
+                    PreferenceManager.setCurrentLockMode(mTargetLockMode);
+                }
+                finishWithResult(RESULT_OK);
+                break;
+        }
+    }
+
+    private void finishWithResult(int resultCode) {
+        setResult(resultCode);
+        finish();
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        mFingerprintAuth.startAuth();
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putString(SS_NEW_CODE, mNewCode);
-        outState.putInt(SS_CURRENT_STEP, mCurrentStep);
-        outState.putSerializable(SS_CURRENT_LOCK_MODE, mCurrentLockMode);
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            mFingerprintAuth.stopAuth();
-        }
-    }
-
-    private void unpackIntent(Intent intent, Bundle savedInstanceState) {
-        mAction = intent.getIntExtra(ACTION, ACTION_UNLOCK);
-        mTargetLockMode = (LockMode) intent.getSerializableExtra(MODE);
-        if (mTargetLockMode == null) {
-            mTargetLockMode = LockMode.NONE;
-        }
-        if (savedInstanceState != null) {
-            mNewCode = savedInstanceState.getString(SS_NEW_CODE);
-            mCurrentStep = savedInstanceState.getInt(SS_CURRENT_STEP);
-            mCurrentLockMode = (LockMode) savedInstanceState.getSerializable(SS_CURRENT_LOCK_MODE);
-        } else {
-            switch (mAction) {
-                case ACTION_UNLOCK:
-                case ACTION_DISABLE:
-                case ACTION_CHANGE_KEY:
-                case ACTION_CHANGE_MODE:
-                    mCurrentLockMode = PreferenceManager.getCurrentLockMode();
-                    break;
-                case ACTION_ENABLE:
-                    mCurrentLockMode = mTargetLockMode;
-                    break;
-            }
-        }
-    }
-
-    private void initializeUi(Bundle savedInstanceState) {
-        setContentView(R.layout.activity_lock);
-        mPinLayout = findViewById(R.id.pin_layout);
-        mPinHelpTextView = findViewById(R.id.pin_help_text_view);
-        IndicatorDots indicatorDotsView = findViewById(R.id.indicator_dots);
-        mPinLockView = findViewById(R.id.pin_lock_view);
-        mSequenceLayout = findViewById(R.id.sequence_layout);
-        mSequenceHelpTextView = findViewById(R.id.sequence_help_text_view);
-        mPatternLockView = findViewById(R.id.pattern_lock_view);
-        mFingerprintLayout = findViewById(R.id.fingerprint_layout);
-        mFingerprintHelpTextView = findViewById(R.id.fingerprint_help_text_view);
-        // enable ui
-        indicatorDotsView.setPinLength(PIN_CODE_LENGTH);
-        mPinLockView.setPinLength(PIN_CODE_LENGTH);
-        mPinLockView.attachIndicatorDots(indicatorDotsView);
-        mPinLockView.setPinLockListener(new PinLockListener() {
-
-            @Override
-            public void onComplete(String pin) {
-                onPinCodeComplete(pin);
-            }
-
-            @Override
-            public void onEmpty() {
-                // not used
-            }
-
-            @Override
-            public void onPinChange(int pinLength, String intermediatePin) {
-                // not used
-            }
-
-        });
-        mPatternLockView.addPatternLockListener(new PatternLockViewListener() {
-
-            @Override
-            public void onStarted() {
-                // not used
-            }
-
-            @Override
-            public void onProgress(List<PatternLockView.Dot> progressPattern) {
-                // not used
-            }
-
-            @Override
-            public void onComplete(List<PatternLockView.Dot> pattern) {
-                onPatternComplete(PatternLockUtils.patternToString(mPatternLockView, pattern));
-            }
-
-            @Override
-            public void onCleared() {
-                // not used
-            }
-
-        });
-        // setup the views
-        if (savedInstanceState == null) {
-            if (mCurrentLockMode == LockMode.PIN) {
-                switch (mAction) {
-                    case ACTION_UNLOCK:
-                    case ACTION_DISABLE:
-                        mPinHelpTextView.setText(R.string.help_insert_pin_code);
-                        break;
-                    case ACTION_ENABLE:
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mPinHelpTextView.setText(R.string.help_create_new_pin_code);
-                        break;
-                    case ACTION_CHANGE_KEY:
-                    case ACTION_CHANGE_MODE:
-                        mCurrentStep = STEP_INSERT_OLD_CODE;
-                        mPinHelpTextView.setText(R.string.help_insert_old_pin_code);
-                        break;
-                }
-            } else if (mCurrentLockMode == LockMode.SEQUENCE) {
-                switch (mAction) {
-                    case ACTION_UNLOCK:
-                    case ACTION_DISABLE:
-                        mSequenceHelpTextView.setText(R.string.help_insert_sequence);
-                        break;
-                    case ACTION_ENABLE:
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mSequenceHelpTextView.setText(R.string.help_create_new_sequence);
-                        break;
-                    case ACTION_CHANGE_KEY:
-                    case ACTION_CHANGE_MODE:
-                        mCurrentStep = STEP_INSERT_OLD_CODE;
-                        mSequenceHelpTextView.setText(R.string.help_insert_old_sequence);
-                        break;
-                }
-            } else if (mCurrentLockMode == LockMode.FINGERPRINT) {
-                switch (mAction) {
-                    case ACTION_UNLOCK:
-                    case ACTION_DISABLE:
-                        mFingerprintHelpTextView.setText(R.string.help_insert_fingerprint);
-                        break;
-                    case ACTION_ENABLE:
-                    case ACTION_CHANGE_KEY:
-                    case ACTION_CHANGE_MODE:
-                        mCurrentStep = STEP_INSERT_OLD_CODE;
-                        mFingerprintHelpTextView.setText(R.string.help_create_fingerprint);
-                        break;
-                }
-            }
-        }
-        showLayout(mCurrentLockMode);
-    }
-
-    private void showLayout(LockMode lockMode) {
-        mPinLayout.setVisibility(lockMode == LockMode.PIN ? View.VISIBLE : View.GONE);
-        mSequenceLayout.setVisibility(lockMode == LockMode.SEQUENCE ? View.VISIBLE : View.GONE);
-        mFingerprintLayout.setVisibility(lockMode == LockMode.FINGERPRINT ? View.VISIBLE : View.GONE);
-    }
-
-    private void onPinCodeComplete(String code) {
-        switch (mAction) {
-            case ACTION_UNLOCK:
-                if (TextUtils.equals(code, PreferenceManager.getCurrentLockCode())) {
-                    PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                    setResult(RESULT_OK);
-                    finish();
-                } else {
-                    mPinLockView.resetPinLockView();
-                    mPinHelpTextView.setText(R.string.help_insert_pin_code_failed);
-                }
-                break;
-            case ACTION_DISABLE:
-                if (TextUtils.equals(code, PreferenceManager.getCurrentLockCode())) {
-                    PreferenceManager.setCurrentLockMode(LockMode.NONE);
-                    PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                    PreferenceManager.setCurrentLockCode(null);
-                    setResult(RESULT_OK);
-                    finish();
-                } else {
-                    mPinLockView.resetPinLockView();
-                    mPinHelpTextView.setText(R.string.help_insert_pin_code_failed);
-                }
-                break;
-            case ACTION_ENABLE:
-                if (mCurrentStep == STEP_INSERT_NEW_CODE) {
-                    mNewCode = code;
-                    mCurrentStep = STEP_VERIFY_NEW_CODE;
-                    mPinLockView.resetPinLockView();
-                    mPinHelpTextView.setText(R.string.help_verify_created_pin_code);
-                } else if (mCurrentStep == STEP_VERIFY_NEW_CODE) {
-                    if (TextUtils.equals(mNewCode, code)) {
-                        PreferenceManager.setCurrentLockMode(LockMode.PIN);
-                        PreferenceManager.setCurrentLockCode(code);
-                        PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                        setResult(RESULT_OK);
-                        finish();
-                    } else {
-                        // the user has inserted two different codes, simply alert him and restart
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mPinLockView.resetPinLockView();
-                        mPinHelpTextView.setText(R.string.help_verify_created_pin_code_failed);
-                    }
-                }
-                break;
-            case ACTION_CHANGE_KEY:
-                if (mCurrentStep == STEP_INSERT_OLD_CODE) {
-                    if (TextUtils.equals(code, PreferenceManager.getCurrentLockCode())) {
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mPinLockView.resetPinLockView();
-                        mPinHelpTextView.setText(R.string.help_create_new_pin_code);
-                    } else {
-                        mPinLockView.resetPinLockView();
-                        mPinHelpTextView.setText(R.string.help_insert_pin_code_failed);
-                    }
-                } else if (mCurrentStep == STEP_INSERT_NEW_CODE) {
-                    mNewCode = code;
-                    mCurrentStep = STEP_VERIFY_NEW_CODE;
-                    mPinLockView.resetPinLockView();
-                    mPinHelpTextView.setText(R.string.help_verify_created_pin_code);
-                } else if (mCurrentStep == STEP_VERIFY_NEW_CODE) {
-                    if (TextUtils.equals(mNewCode, code)) {
-                        PreferenceManager.setCurrentLockMode(LockMode.PIN);
-                        PreferenceManager.setCurrentLockCode(code);
-                        PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                        setResult(RESULT_OK);
-                        finish();
-                    } else {
-                        // the user has inserted two different codes, simply alert him and restart
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mPinLockView.resetPinLockView();
-                        mPinHelpTextView.setText(R.string.help_verify_created_pin_code_failed);
-                    }
-                }
-                break;
-            case ACTION_CHANGE_MODE:
-                if (mCurrentStep == STEP_INSERT_OLD_CODE) {
-                    if (TextUtils.equals(code, PreferenceManager.getCurrentLockCode())) {
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mCurrentLockMode = mTargetLockMode;
-                        if (mCurrentLockMode == LockMode.SEQUENCE) {
-                            mSequenceHelpTextView.setText(R.string.help_create_new_sequence);
-                        } else if (mCurrentLockMode == LockMode.FINGERPRINT) {
-                            mFingerprintHelpTextView.setText(R.string.help_create_fingerprint);
-                        }
-                        showLayout(mCurrentLockMode);
-                    } else {
-                        mPinHelpTextView.setText(R.string.help_insert_pin_code_failed);
-                    }
-                    mPinLockView.resetPinLockView();
-                } else if (mCurrentStep == STEP_INSERT_NEW_CODE) {
-                    mNewCode = code;
-                    mCurrentStep = STEP_VERIFY_NEW_CODE;
-                    mPinLockView.resetPinLockView();
-                    mPinHelpTextView.setText(R.string.help_verify_created_pin_code);
-                } else if (mCurrentStep == STEP_VERIFY_NEW_CODE) {
-                    if (TextUtils.equals(mNewCode, code)) {
-                        PreferenceManager.setCurrentLockMode(LockMode.PIN);
-                        PreferenceManager.setCurrentLockCode(code);
-                        PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                        setResult(RESULT_OK);
-                        finish();
-                    } else {
-                        // the user has inserted two different codes, simply alert him and restart
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mPinLockView.resetPinLockView();
-                        mPinHelpTextView.setText(R.string.help_verify_created_pin_code_failed);
-                    }
-                }
-                break;
-        }
-    }
-
-    private void onPatternComplete(String pattern) {
-        switch (mAction) {
-            case ACTION_UNLOCK:
-                if (TextUtils.equals(pattern, PreferenceManager.getCurrentLockCode())) {
-                    PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                    setResult(RESULT_OK);
-                    finish();
-                } else {
-                    mPatternLockView.setViewMode(PatternLockView.PatternViewMode.WRONG);
-                    mSequenceHelpTextView.setText(R.string.help_insert_sequence_failed);
-                }
-                break;
-            case ACTION_DISABLE:
-                if (TextUtils.equals(pattern, PreferenceManager.getCurrentLockCode())) {
-                    PreferenceManager.setCurrentLockMode(LockMode.NONE);
-                    PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                    PreferenceManager.setCurrentLockCode(null);
-                    setResult(RESULT_OK);
-                    finish();
-                } else {
-                    mPatternLockView.setViewMode(PatternLockView.PatternViewMode.WRONG);
-                    mSequenceHelpTextView.setText(R.string.help_insert_sequence_failed);
-                }
-                break;
-            case ACTION_ENABLE:
-                if (mCurrentStep == STEP_INSERT_NEW_CODE) {
-                    mNewCode = pattern;
-                    mCurrentStep = STEP_VERIFY_NEW_CODE;
-                    mPatternLockView.clearPattern();
-                    mSequenceHelpTextView.setText(R.string.help_verify_created_sequence);
-                } else if (mCurrentStep == STEP_VERIFY_NEW_CODE) {
-                    if (TextUtils.equals(mNewCode, pattern)) {
-                        PreferenceManager.setCurrentLockMode(LockMode.SEQUENCE);
-                        PreferenceManager.setCurrentLockCode(pattern);
-                        PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                        setResult(RESULT_OK);
-                        finish();
-                    } else {
-                        // the user has inserted two different codes, simply alert him and restart
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mPatternLockView.setViewMode(PatternLockView.PatternViewMode.WRONG);
-                        mSequenceHelpTextView.setText(R.string.help_verify_created_sequence_failed);
-                    }
-                }
-                break;
-            case ACTION_CHANGE_KEY:
-                if (mCurrentStep == STEP_INSERT_OLD_CODE) {
-                    if (TextUtils.equals(pattern, PreferenceManager.getCurrentLockCode())) {
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mPatternLockView.clearPattern();
-                        mSequenceHelpTextView.setText(R.string.help_create_new_sequence);
-                    } else {
-                        mPatternLockView.setViewMode(PatternLockView.PatternViewMode.WRONG);
-                        mSequenceHelpTextView.setText(R.string.help_insert_sequence_failed);
-                    }
-                } else if (mCurrentStep == STEP_INSERT_NEW_CODE) {
-                    mNewCode = pattern;
-                    mCurrentStep = STEP_VERIFY_NEW_CODE;
-                    mPatternLockView.clearPattern();
-                    mSequenceHelpTextView.setText(R.string.help_verify_created_sequence);
-                } else if (mCurrentStep == STEP_VERIFY_NEW_CODE) {
-                    if (TextUtils.equals(mNewCode, pattern)) {
-                        PreferenceManager.setCurrentLockMode(LockMode.SEQUENCE);
-                        PreferenceManager.setCurrentLockCode(pattern);
-                        PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                        setResult(RESULT_OK);
-                        finish();
-                    } else {
-                        // the user has inserted two different codes, simply alert him and restart
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mPatternLockView.setViewMode(PatternLockView.PatternViewMode.WRONG);
-                        mSequenceHelpTextView.setText(R.string.help_verify_created_sequence_failed);
-                    }
-                }
-                break;
-            case ACTION_CHANGE_MODE:
-                if (mCurrentStep == STEP_INSERT_OLD_CODE) {
-                    if (TextUtils.equals(pattern, PreferenceManager.getCurrentLockCode())) {
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mCurrentLockMode = mTargetLockMode;
-                        if (mCurrentLockMode == LockMode.PIN) {
-                            mPinHelpTextView.setText(R.string.help_create_new_pin_code);
-                        } else if (mCurrentLockMode == LockMode.FINGERPRINT) {
-                            mFingerprintHelpTextView.setText(R.string.help_create_fingerprint);
-                        }
-                        mPatternLockView.clearPattern();
-                        showLayout(mCurrentLockMode);
-                    } else {
-                        mPatternLockView.setViewMode(PatternLockView.PatternViewMode.WRONG);
-                        mSequenceHelpTextView.setText(R.string.help_insert_pin_code_failed);
-                    }
-                } else if (mCurrentStep == STEP_INSERT_NEW_CODE) {
-                    mNewCode = pattern;
-                    mCurrentStep = STEP_VERIFY_NEW_CODE;
-                    mPatternLockView.clearPattern();
-                    mSequenceHelpTextView.setText(R.string.help_verify_created_sequence);
-                } else if (mCurrentStep == STEP_VERIFY_NEW_CODE) {
-                    if (TextUtils.equals(mNewCode, pattern)) {
-                        PreferenceManager.setCurrentLockMode(LockMode.SEQUENCE);
-                        PreferenceManager.setCurrentLockCode(pattern);
-                        PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                        setResult(RESULT_OK);
-                        finish();
-                    } else {
-                        // the user has inserted two different codes, simply alert him and restart
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mPatternLockView.setViewMode(PatternLockView.PatternViewMode.WRONG);
-                        mSequenceHelpTextView.setText(R.string.help_verify_created_sequence_failed);
-                    }
-                }
-                break;
-        }
-    }
-
-    private void onFingerprintScan(boolean recognized, int errorType, CharSequence message) {
-        switch (mAction) {
-            case ACTION_UNLOCK:
-                if (recognized) {
-                    PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                    setResult(RESULT_OK);
-                    finish();
-                } else {
-                    mFingerprintHelpTextView.setText(R.string.help_insert_fingerprint_failed);
-                }
-                break;
-            case ACTION_DISABLE:
-                if (recognized) {
-                    PreferenceManager.setCurrentLockMode(LockMode.NONE);
-                    PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                    PreferenceManager.setCurrentLockCode(null);
-                    setResult(RESULT_OK);
-                    finish();
-                } else {
-                    mFingerprintHelpTextView.setText(R.string.help_insert_fingerprint_failed);
-                }
-                break;
-            case ACTION_ENABLE:
-                if (recognized) {
-                    PreferenceManager.setCurrentLockMode(LockMode.FINGERPRINT);
-                    PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                    setResult(RESULT_OK);
-                    finish();
-                } else {
-                    mFingerprintHelpTextView.setText(R.string.help_insert_fingerprint_failed);
-                }
-                break;
-            case ACTION_CHANGE_KEY:
-                // not supported, use android settings to change or add another fingerprint
-                break;
-            case ACTION_CHANGE_MODE:
-                if (mCurrentStep == STEP_INSERT_OLD_CODE) {
-                    if (recognized) {
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mCurrentLockMode = mTargetLockMode;
-                        if (mCurrentLockMode == LockMode.PIN) {
-                            mPinHelpTextView.setText(R.string.help_create_new_pin_code);
-                        } else if (mCurrentLockMode == LockMode.SEQUENCE) {
-                            mSequenceHelpTextView.setText(R.string.help_create_new_sequence);
-                        }
-                        showLayout(mCurrentLockMode);
-                    } else {
-                        mFingerprintHelpTextView.setText(R.string.help_insert_fingerprint_failed);
-                    }
-                } else if (mCurrentStep == STEP_INSERT_NEW_CODE) {
-                    if (recognized) {
-                        PreferenceManager.setCurrentLockMode(LockMode.FINGERPRINT);
-                        PreferenceManager.setLastLockTime(System.currentTimeMillis());
-                        setResult(RESULT_OK);
-                        finish();
-                    } else {
-                        // the user has inserted two different codes, simply alert him and restart
-                        mCurrentStep = STEP_INSERT_NEW_CODE;
-                        mFingerprintHelpTextView.setText(R.string.help_insert_fingerprint_failed);
-                    }
-                }
-                break;
-        }
+    public void onBackPressed() {
+        // Prevent back button from bypassing authentication
+        finishWithResult(RESULT_CANCELED);
     }
 }

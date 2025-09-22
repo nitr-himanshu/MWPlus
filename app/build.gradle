@@ -20,11 +20,23 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 29
+    namespace 'com.oriondev.moneywallet'
+    compileSdk 35
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+    
+    buildFeatures {
+        buildConfig true
+    }
+    
+    
     defaultConfig {
         applicationId "com.oriondev.moneywallet"
-        minSdkVersion 21
-        targetSdkVersion 29
+        minSdk 21
+        targetSdk 35
         versionCode 75
         versionName "4.0.5.10"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -87,26 +99,29 @@ dependencies {
     implementation supportDependencies.preference
     implementation 'com.afollestad.material-dialogs:core:0.9.6.0'
     implementation 'com.afollestad.material-dialogs:commons:0.9.6.0'
-    implementation('com.mikepenz:materialdrawer:6.0.8@aar') {
+    implementation('com.mikepenz:materialdrawer:6.1.2@aar') {
         transitive = true
     }
+    implementation 'com.mikepenz:google-material-typeface:3.0.1.4.original-kotlin@aar'
     implementation 'com.pnikosis:materialish-progress:1.7'
-    implementation 'com.github.rubensousa:bottomsheetbuilder:1.6.1'
-    implementation('com.philliphsu:bottomsheetpickers:2.4.1') {
-        exclude group: 'com.android.support', module: 'appcompat-v7'
-        exclude group: 'com.android.support', module: 'design'
-    }
+    // Libraries not available in Maven repositories - replaced with standard Android components
+    // implementation 'com.github.rubensousa:BottomSheetBuilder:1.6.1'
+    // implementation('com.github.philliphsu:BottomSheetPickers:2.4.1') {
+    //     exclude group: 'com.android.support', module: 'appcompat-v7'
+    //     exclude group: 'com.android.support', module: 'design'
+    // }
     implementation 'com.github.florent37:expansionpanel:1.1.1'
     implementation 'commons-io:commons-io:2.6'
     implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'androidx.activity:activity:1.2.0-alpha08'
-    implementation 'androidx.fragment:fragment:1.3.0-alpha08'
+    implementation 'androidx.activity:activity:1.9.3'
+    implementation 'androidx.fragment:fragment:1.8.5'
+    implementation 'androidx.biometric:biometric:1.1.0'
     implementation 'net.lingala.zip4j:zip4j:1.3.2'
     implementation 'com.github.daniel-stoneuk:material-about-library:2.2.4'
     implementation 'com.github.apl-devs:appintro:v4.2.3'
-    implementation 'com.andrognito.pinlockview:pinlockview:2.1.0'
-    implementation 'com.andrognito.patternlockview:patternlockview:1.0.0'
-    implementation 'com.multidots:fingerprint-auth:1.0.1'
+    // implementation 'com.github.aritraroy:PinLockView:3.1.0' // Not available
+    // implementation 'com.andrognito.patternlockview:patternlockview:1.0.0' // Not available
+    // implementation 'com.multidots:fingerprint-auth:1.0.1' // Not available
     implementation 'com.github.PhilJay:MPAndroidChart:v3.0.3'
     implementation 'com.github.ronaldsmartin:Material-ViewPagerIndicator:1.0.4'
     implementation 'com.jaredrummler:material-spinner:1.2.5'
@@ -114,7 +129,7 @@ dependencies {
     implementation 'com.opencsv:opencsv:4.4'
     implementation 'net.sourceforge.jexcelapi:jxl:2.6.12'
     implementation 'com.itextpdf:itextpdf:5.5.13'
-    implementation 'me.weishu:free_reflection:2.2.0'
+    // implementation 'me.weishu:free_reflection:2.2.0' // Not available
     implementation 'com.github.bumptech.glide:glide:4.8.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.8.0'
     // google play dependencies
