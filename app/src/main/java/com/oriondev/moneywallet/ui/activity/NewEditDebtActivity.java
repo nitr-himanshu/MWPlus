@@ -301,9 +301,9 @@ public class NewEditDebtActivity extends NewEditItemActivity implements IconPick
                         mNoteEditText.setText(cursor.getString(cursor.getColumnIndex(Contract.Debt.NOTE)));
                         icon = IconLoader.parse(cursor.getString(cursor.getColumnIndex(Contract.Debt.ICON)));
                         money = cursor.getLong(cursor.getColumnIndex(Contract.Debt.MONEY));
-                        date = DateUtils.getDateFromSQLDateString(cursor.getString(cursor.getColumnIndex(Contract.Debt.DATE)));
+                        date = DateUtils.getDateFromSQLDateTimeString(cursor.getString(cursor.getColumnIndex(Contract.Debt.DATE)));
                         if (!cursor.isNull(cursor.getColumnIndex(Contract.Debt.EXPIRATION_DATE))) {
-                            expirationDate = DateUtils.getDateFromSQLDateString(cursor.getString(cursor.getColumnIndex(Contract.Debt.EXPIRATION_DATE)));
+                            expirationDate = DateUtils.getDateFromSQLDateTimeString(cursor.getString(cursor.getColumnIndex(Contract.Debt.EXPIRATION_DATE)));
                         }
                         wallet = new Wallet(
                                 cursor.getLong(cursor.getColumnIndex(Contract.Debt.WALLET_ID)),
@@ -452,8 +452,8 @@ public class NewEditDebtActivity extends NewEditItemActivity implements IconPick
         contentValues.put(Contract.Debt.TYPE, mDebtType.getValue());
         contentValues.put(Contract.Debt.ICON, mIconPicker.getCurrentIcon().toString());
         contentValues.put(Contract.Debt.DESCRIPTION, mDescriptionEditText.getTextAsString());
-        contentValues.put(Contract.Debt.DATE, DateUtils.getSQLDateString(mDatePicker.getCurrentDateTime()));
-        contentValues.put(Contract.Debt.EXPIRATION_DATE, mExpDatePicker.isSelected() ? DateUtils.getSQLDateString(mExpDatePicker.getCurrentDateTime()) : null);
+        contentValues.put(Contract.Debt.DATE, DateUtils.getSQLDateTimeString(mDatePicker.getCurrentDateTime()));
+        contentValues.put(Contract.Debt.EXPIRATION_DATE, mExpDatePicker.isSelected() ? DateUtils.getSQLDateTimeString(mExpDatePicker.getCurrentDateTime()) : null);
         contentValues.put(Contract.Debt.WALLET_ID, mWalletPicker.getCurrentWallet().getId());
         contentValues.put(Contract.Debt.NOTE, mNoteEditText.getTextAsString());
         contentValues.put(Contract.Debt.PLACE_ID, mPlacePicker.isSelected() ? mPlacePicker.getCurrentPlace().getId() : null);

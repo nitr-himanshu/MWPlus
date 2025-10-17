@@ -299,11 +299,11 @@ public class DebtItemFragment extends SecondaryPanelFragment implements LoaderMa
                 } else {
                     mDescriptionTextView.setVisibility(View.GONE);
                 }
-                Date date = DateUtils.getDateFromSQLDateString(cursor.getString(cursor.getColumnIndex(Contract.Debt.DATE)));
+                Date date = DateUtils.getDateFromSQLDateTimeString(cursor.getString(cursor.getColumnIndex(Contract.Debt.DATE)));
                 DateFormatter.applyDate(mDateTextView, date);
                 String expirationDate = cursor.getString(cursor.getColumnIndex(Contract.Debt.EXPIRATION_DATE));
                 if (!TextUtils.isEmpty(expirationDate)) {
-                    DateFormatter.applyDate(mExpirationDateTextView, DateUtils.getDateFromSQLDateString(expirationDate));
+                    DateFormatter.applyDate(mExpirationDateTextView, DateUtils.getDateFromSQLDateTimeString(expirationDate));
                     mExpirationDateTextView.setVisibility(View.VISIBLE);
                 } else {
                     mExpirationDateTextView.setVisibility(View.GONE);

@@ -2213,7 +2213,7 @@ import java.util.UUID;
                 cv = new ContentValues();
                 Contract.DebtType type = Contract.DebtType.fromValue(contentValues.getAsInteger(Contract.Debt.TYPE));
                 cv.put(Contract.Transaction.MONEY, contentValues.getAsLong(Contract.Debt.MONEY));
-                cv.put(Contract.Transaction.DATE, DateUtils.getSQLDateTimeString(System.currentTimeMillis()));
+                cv.put(Contract.Transaction.DATE, contentValues.getAsString(Contract.Debt.DATE));
                 cv.put(Contract.Transaction.DESCRIPTION, contentValues.getAsString(Contract.Debt.DESCRIPTION));
                 cv.put(Contract.Transaction.CATEGORY_ID, getSystemCategoryId((type == Contract.DebtType.DEBT) ? Schema.CategoryTag.DEBT : Schema.CategoryTag.CREDIT));
                 cv.put(Contract.Transaction.DIRECTION, (type == Contract.DebtType.CREDIT) ? Contract.Direction.EXPENSE : Contract.Direction.INCOME);
@@ -2346,6 +2346,9 @@ import java.util.UUID;
                     cv = new ContentValues();
                     if (contentValues.containsKey(Contract.Debt.MONEY)) {
                         cv.put(Contract.Transaction.MONEY, contentValues.getAsLong(Contract.Debt.MONEY));
+                    }
+                    if (contentValues.containsKey(Contract.Debt.DATE)) {
+                        cv.put(Contract.Transaction.DATE, contentValues.getAsString(Contract.Debt.DATE));
                     }
                     if (contentValues.containsKey(Contract.Debt.DESCRIPTION)) {
                         cv.put(Contract.Transaction.DESCRIPTION, contentValues.getAsString(Contract.Debt.DESCRIPTION));
