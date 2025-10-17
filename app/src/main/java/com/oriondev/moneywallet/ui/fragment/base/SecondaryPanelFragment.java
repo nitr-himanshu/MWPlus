@@ -81,6 +81,10 @@ public abstract class SecondaryPanelFragment extends Fragment implements Toolbar
                 mToolbar.inflateMenu(menuRes);
                 mToolbar.setOnMenuItemClickListener(this);
             }
+            // Force theme application to ensure colors are applied
+            if (mToolbar instanceof com.oriondev.moneywallet.ui.view.theme.ThemeEngine.ThemeConsumer) {
+                ((com.oriondev.moneywallet.ui.view.theme.ThemeEngine.ThemeConsumer) mToolbar).onApplyTheme(com.oriondev.moneywallet.ui.view.theme.ThemeEngine.getTheme());
+            }
         }
         mIsCreated = true;
         return view;
