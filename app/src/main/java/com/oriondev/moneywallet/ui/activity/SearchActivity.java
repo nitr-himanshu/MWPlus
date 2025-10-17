@@ -88,7 +88,8 @@ public class SearchActivity extends SinglePanelActivity implements LoaderManager
                     true,   // money
                     true,   // note
                     true,   // event
-                    true    // place
+                    true,   // place
+                    false   // unconfirmed (disabled by default)
             };
         }
         parent.addView(mAdvancedRecyclerView);
@@ -164,7 +165,8 @@ public class SearchActivity extends SinglePanelActivity implements LoaderManager
                 getString(R.string.hint_money),
                 getString(R.string.hint_note),
                 getString(R.string.hint_event),
-                getString(R.string.hint_place)
+                getString(R.string.hint_place),
+                getString(R.string.hint_unconfirmed)
         };
         ThemedDialog.buildMaterialDialog(this)
                 .title(R.string.dialog_filter_search_title)
@@ -180,7 +182,8 @@ public class SearchActivity extends SinglePanelActivity implements LoaderManager
                                 isChecked(3, which),
                                 isChecked(4, which),
                                 isChecked(5, which),
-                                isChecked(6, which)
+                                isChecked(6, which),
+                                isChecked(7, which)
                         };
                         mAdvancedRecyclerView.setState(AdvancedRecyclerView.State.LOADING);
                         loadTransactionAsync(mSearchEditText.getText().toString());
@@ -217,13 +220,30 @@ public class SearchActivity extends SinglePanelActivity implements LoaderManager
         String query = args.getString(ARG_QUERY);
         Uri uri = DataContentProvider.CONTENT_TRANSACTIONS;
         StringBuilder selection = new StringBuilder();
-        if (mSearchFlags[0]) {appendSelection(selection, Contract.Transaction.DESCRIPTION);}
-        if (mSearchFlags[1]) {appendSelection(selection, Contract.Transaction.CATEGORY_NAME);}
-        if (mSearchFlags[2]) {appendSelection(selection, Contract.Transaction.DATE);}
-        if (mSearchFlags[3]) {appendSelection(selection, Contract.Transaction.MONEY);}
-        if (mSearchFlags[4]) {appendSelection(selection, Contract.Transaction.NOTE);}
-        if (mSearchFlags[5]) {appendSelection(selection, Contract.Transaction.EVENT_NAME);}
-        if (mSearchFlags[6]) {appendSelection(selection, Contract.Transaction.PLACE_NAME);}
+        
+        // Build text search criteria
+        StringBuilder textSearch = new StringBuilder();
+        if (mSearchFlags[0]) {appendSelection(textSearch, Contract.Transaction.DESCRIPTION);}
+        if (mSearchFlags[1]) {appendSelection(textSearch, Contract.Transaction.CATEGORY_NAME);}
+        if (mSearchFlags[2]) {appendSelection(textSearch, Contract.Transaction.DATE);}
+        if (mSearchFlags[3]) {appendSelection(textSearch, Contract.Transaction.MONEY);}
+        if (mSearchFlags[4]) {appendSelection(textSearch, Contract.Transaction.NOTE);}
+        if (mSearchFlags[5]) {appendSelection(textSearch, Contract.Transaction.EVENT_NAME);}
+        if (mSearchFlags[6]) {appendSelection(textSearch, Contract.Transaction.PLACE_NAME);}
+        
+        // Add text search to selection if any text filters are enabled
+        if (textSearch.length() > 0) {
+            selection.append("(").append(textSearch).append(")");
+        }
+        
+        // Add unconfirmed filter if enabled
+        if (mSearchFlags[7]) {
+            if (selection.length() > 0) {
+                selection.append(" AND ");
+            }
+            selection.append(Contract.Transaction.CONFIRMED).append(" = 0");
+        }
+        
         String[] selectionArgs = getSelectionArguments(query);
         String sortOrder = Contract.Transaction.DATE + " DESC";
         return new CursorLoader(this, uri, null, selection.toString(), selectionArgs, sortOrder);
@@ -239,8 +259,10 @@ public class SearchActivity extends SinglePanelActivity implements LoaderManager
 
     private String[] getSelectionArguments(String query) {
         List<String> arguments = new ArrayList<>();
-        for (boolean flag : mSearchFlags) {
-            if (flag) {
+        // Only add arguments for text search filters (first 7 flags)
+        // The unconfirmed filter (index 7) doesn't require a query argument
+        for (int i = 0; i < 7 && i < mSearchFlags.length; i++) {
+            if (mSearchFlags[i]) {
                 arguments.add(query);
             }
         }
