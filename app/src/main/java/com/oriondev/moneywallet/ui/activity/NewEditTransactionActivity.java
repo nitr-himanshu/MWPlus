@@ -656,7 +656,7 @@ public class NewEditTransactionActivity extends NewEditItemActivity implements M
                     mSavingId = intent.getLongExtra(SAVING_ID, 0L);
                     long savingMoney = 0L;
                     long savingProgress = 0L;
-                    Uri uri = ContentUris.withAppendedId(DataContentProvider.CONTENT_SAVINGS, getItemId());
+                    Uri uri = ContentUris.withAppendedId(DataContentProvider.CONTENT_SAVINGS, mSavingId);
                     String[] projection = new String[] {
                             Contract.Saving.END_MONEY,
                             Contract.Saving.WALLET_ID,
