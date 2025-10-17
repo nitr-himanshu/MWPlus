@@ -125,13 +125,15 @@ public class TransactionItemFragment extends SecondaryPanelFragment implements L
 
     @Override
     protected int onInflateMenu() {
-        return R.menu.menu_edit_delete_item;
+        return R.menu.menu_clone_edit_delete_transaction;
     }
 
     @Override
     public boolean onMenuItemClick(MenuItem item) {
         int itemId = item.getItemId();
-        if (itemId == R.id.action_edit_item) {
+        if (itemId == R.id.action_clone_transaction) {
+            cloneTransaction();
+        } else if (itemId == R.id.action_edit_item) {
             Intent intent = new Intent(getActivity(), NewEditTransactionActivity.class);
             intent.putExtra(NewEditItemActivity.MODE, NewEditItemActivity.Mode.EDIT_ITEM);
             intent.putExtra(NewEditItemActivity.ID, getItemId());
@@ -140,6 +142,146 @@ public class TransactionItemFragment extends SecondaryPanelFragment implements L
             showDeleteDialog(getActivity());
         }
         return false;
+    }
+
+    private void cloneTransaction() {
+        Activity activity = getActivity();
+        if (activity != null) {
+            Uri uri = ContentUris.withAppendedId(DataContentProvider.CONTENT_TRANSACTIONS, getItemId());
+            ContentResolver contentResolver = activity.getContentResolver();
+            
+            // Query the transaction data
+            String[] projection = new String[] {
+                    Contract.Transaction.MONEY,
+                    Contract.Transaction.DESCRIPTION,
+                    Contract.Transaction.NOTE,
+                    Contract.Transaction.CONFIRMED,
+                    Contract.Transaction.COUNT_IN_TOTAL,
+                    Contract.Transaction.CATEGORY_ID,
+                    Contract.Transaction.CATEGORY_NAME,
+                    Contract.Transaction.CATEGORY_ICON,
+                    Contract.Transaction.CATEGORY_TYPE,
+                    Contract.Transaction.CATEGORY_TAG,
+                    Contract.Transaction.WALLET_ID,
+                    Contract.Transaction.WALLET_NAME,
+                    Contract.Transaction.WALLET_ICON,
+                    Contract.Transaction.WALLET_CURRENCY,
+                    Contract.Transaction.EVENT_ID,
+                    Contract.Transaction.EVENT_NAME,
+                    Contract.Transaction.EVENT_ICON,
+                    Contract.Transaction.EVENT_START_DATE,
+                    Contract.Transaction.EVENT_END_DATE,
+                    Contract.Transaction.PLACE_ID,
+                    Contract.Transaction.PLACE_NAME,
+                    Contract.Transaction.PLACE_ICON,
+                    Contract.Transaction.PLACE_ADDRESS,
+                    Contract.Transaction.PLACE_LATITUDE,
+                    Contract.Transaction.PLACE_LONGITUDE,
+                    Contract.Transaction.TYPE
+            };
+            
+            Cursor cursor = contentResolver.query(uri, projection, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                Intent intent = new Intent(activity, NewEditTransactionActivity.class);
+                intent.putExtra(NewEditItemActivity.MODE, NewEditItemActivity.Mode.NEW_ITEM);
+                intent.putExtra(NewEditTransactionActivity.TYPE, cursor.getInt(cursor.getColumnIndex(Contract.Transaction.TYPE)));
+                
+                // Pass transaction data as extras
+                intent.putExtra("clone_money", cursor.getLong(cursor.getColumnIndex(Contract.Transaction.MONEY)));
+                
+                String description = cursor.getString(cursor.getColumnIndex(Contract.Transaction.DESCRIPTION));
+                if (description != null) {
+                    intent.putExtra("clone_description", description);
+                }
+                
+                String note = cursor.getString(cursor.getColumnIndex(Contract.Transaction.NOTE));
+                if (note != null) {
+                    intent.putExtra("clone_note", note);
+                }
+                
+                intent.putExtra("clone_confirmed", cursor.getInt(cursor.getColumnIndex(Contract.Transaction.CONFIRMED)) == 1);
+                intent.putExtra("clone_count_in_total", cursor.getInt(cursor.getColumnIndex(Contract.Transaction.COUNT_IN_TOTAL)) == 1);
+                
+                // Create and pass category
+                if (!cursor.isNull(cursor.getColumnIndex(Contract.Transaction.CATEGORY_ID))) {
+                    com.oriondev.moneywallet.model.Category category = new com.oriondev.moneywallet.model.Category(
+                            cursor.getLong(cursor.getColumnIndex(Contract.Transaction.CATEGORY_ID)),
+                            cursor.getString(cursor.getColumnIndex(Contract.Transaction.CATEGORY_NAME)),
+                            com.oriondev.moneywallet.utils.IconLoader.parse(cursor.getString(cursor.getColumnIndex(Contract.Transaction.CATEGORY_ICON))),
+                            Contract.CategoryType.fromValue(cursor.getInt(cursor.getColumnIndex(Contract.Transaction.CATEGORY_TYPE))),
+                            cursor.getString(cursor.getColumnIndex(Contract.Transaction.CATEGORY_TAG))
+                    );
+                    intent.putExtra("clone_category", category);
+                }
+                
+                // Create and pass wallet
+                if (!cursor.isNull(cursor.getColumnIndex(Contract.Transaction.WALLET_ID))) {
+                    com.oriondev.moneywallet.model.Wallet wallet = new com.oriondev.moneywallet.model.Wallet(
+                            cursor.getLong(cursor.getColumnIndex(Contract.Transaction.WALLET_ID)),
+                            cursor.getString(cursor.getColumnIndex(Contract.Transaction.WALLET_NAME)),
+                            com.oriondev.moneywallet.utils.IconLoader.parse(cursor.getString(cursor.getColumnIndex(Contract.Transaction.WALLET_ICON))),
+                            CurrencyManager.getCurrency(cursor.getString(cursor.getColumnIndex(Contract.Transaction.WALLET_CURRENCY))),
+                            0L, 0L
+                    );
+                    intent.putExtra("clone_wallet", wallet);
+                }
+                
+                // Create and pass event
+                if (!cursor.isNull(cursor.getColumnIndex(Contract.Transaction.EVENT_ID))) {
+                    com.oriondev.moneywallet.model.Event event = new com.oriondev.moneywallet.model.Event(
+                            cursor.getLong(cursor.getColumnIndex(Contract.Transaction.EVENT_ID)),
+                            cursor.getString(cursor.getColumnIndex(Contract.Transaction.EVENT_NAME)),
+                            com.oriondev.moneywallet.utils.IconLoader.parse(cursor.getString(cursor.getColumnIndex(Contract.Transaction.EVENT_ICON))),
+                            DateUtils.getDateFromSQLDateString(cursor.getString(cursor.getColumnIndex(Contract.Transaction.EVENT_START_DATE))),
+                            DateUtils.getDateFromSQLDateString(cursor.getString(cursor.getColumnIndex(Contract.Transaction.EVENT_END_DATE)))
+                    );
+                    intent.putExtra("clone_event", event);
+                }
+                
+                // Create and pass place
+                if (!cursor.isNull(cursor.getColumnIndex(Contract.Transaction.PLACE_ID))) {
+                    com.oriondev.moneywallet.model.Place place = new com.oriondev.moneywallet.model.Place(
+                            cursor.getLong(cursor.getColumnIndex(Contract.Transaction.PLACE_ID)),
+                            cursor.getString(cursor.getColumnIndex(Contract.Transaction.PLACE_NAME)),
+                            com.oriondev.moneywallet.utils.IconLoader.parse(cursor.getString(cursor.getColumnIndex(Contract.Transaction.PLACE_ICON))),
+                            cursor.getString(cursor.getColumnIndex(Contract.Transaction.PLACE_ADDRESS)),
+                            cursor.isNull(cursor.getColumnIndex(Contract.Transaction.PLACE_LATITUDE)) ? null : cursor.getDouble(cursor.getColumnIndex(Contract.Transaction.PLACE_LATITUDE)),
+                            cursor.isNull(cursor.getColumnIndex(Contract.Transaction.PLACE_LONGITUDE)) ? null : cursor.getDouble(cursor.getColumnIndex(Contract.Transaction.PLACE_LONGITUDE))
+                    );
+                    intent.putExtra("clone_place", place);
+                }
+                
+                cursor.close();
+                
+                // Query and pass people
+                Uri peopleUri = Uri.withAppendedPath(uri, "people");
+                String[] peopleProjection = new String[] {
+                        Contract.Person.ID,
+                        Contract.Person.NAME,
+                        Contract.Person.ICON
+                };
+                Cursor peopleCursor = contentResolver.query(peopleUri, peopleProjection, null, null, null);
+                if (peopleCursor != null && peopleCursor.moveToFirst()) {
+                    com.oriondev.moneywallet.model.Person[] people = new com.oriondev.moneywallet.model.Person[peopleCursor.getCount()];
+                    for (int i = 0; peopleCursor.moveToPosition(i) && i < peopleCursor.getCount(); i++) {
+                        people[i] = new com.oriondev.moneywallet.model.Person(
+                                peopleCursor.getLong(peopleCursor.getColumnIndex(Contract.Person.ID)),
+                                peopleCursor.getString(peopleCursor.getColumnIndex(Contract.Person.NAME)),
+                                com.oriondev.moneywallet.utils.IconLoader.parse(peopleCursor.getString(peopleCursor.getColumnIndex(Contract.Person.ICON)))
+                        );
+                    }
+                    intent.putExtra("clone_people", people);
+                    peopleCursor.close();
+                }
+                
+                // Start the activity
+                startActivity(intent);
+            }
+            
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
     }
 
     private void showDeleteDialog(Context context) {

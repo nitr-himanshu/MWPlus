@@ -248,6 +248,7 @@
     <string name="title_fragment_item_person">"Person"</string>
 
     <string name="menu_action_attach_file">"Attach file"</string>
+    <string name="menu_action_clone_transaction">"Clone"</string>
     <string name="menu_action_save_changes">"Save changes"</string>
     <string name="menu_refresh_currency_rate">"Refresh currency rate"</string>
     <string name="menu_advanced_settings">"Advanced settings"</string>
