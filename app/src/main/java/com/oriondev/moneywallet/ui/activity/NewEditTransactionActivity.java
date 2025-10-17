@@ -57,6 +57,7 @@ import com.oriondev.moneywallet.storage.database.Contract;
 import com.oriondev.moneywallet.storage.database.DataContentProvider;
 import com.oriondev.moneywallet.storage.preference.PreferenceManager;
 import com.oriondev.moneywallet.ui.view.AttachmentView;
+import com.oriondev.moneywallet.ui.view.text.MaterialAutoCompleteEditText;
 import com.oriondev.moneywallet.ui.view.text.MaterialEditText;
 import com.oriondev.moneywallet.ui.view.text.Validator;
 import com.oriondev.moneywallet.utils.CurrencyManager;
@@ -64,6 +65,7 @@ import com.oriondev.moneywallet.utils.DateFormatter;
 import com.oriondev.moneywallet.utils.DateUtils;
 import com.oriondev.moneywallet.utils.IconLoader;
 import com.oriondev.moneywallet.utils.MoneyFormatter;
+import com.oriondev.moneywallet.utils.TransactionSuggestionHelper;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -117,7 +119,7 @@ public class NewEditTransactionActivity extends NewEditItemActivity implements M
 
     private TextView mCurrencyTextView;
     private TextView mMoneyTextView;
-    private MaterialEditText mDescriptionEditText;
+    private MaterialAutoCompleteEditText mDescriptionEditText;
     private MaterialEditText mCategoryEditText;
     private MaterialEditText mDateEditText;
     private MaterialEditText mTimeEditText;
@@ -327,7 +329,39 @@ public class NewEditTransactionActivity extends NewEditItemActivity implements M
             }
 
         });
+        // Set up autocomplete for description field
+        mDescriptionEditText.setAutoCompleteListener(new MaterialAutoCompleteEditText.AutoCompleteListener() {
+            
+            @Override
+            public void onTextChanged(String text) {
+                // Query for description suggestions
+                List<String> suggestions = TransactionSuggestionHelper.getDescriptionSuggestions(
+                        getContentResolver(), text);
+                mDescriptionEditText.setSuggestions(suggestions);
+            }
+            
+            @Override
+            public void onSuggestionSelected(String suggestion) {
+                // When a suggestion is selected, try to find and suggest the category
+                suggestCategoryForDescription(suggestion);
+            }
+        });
         mAttachmentView.setController(this);
+    }
+    
+    /**
+     * Suggests a category based on the given description by looking up
+     * the most recent transaction with the same description.
+     *
+     * @param description The description to look up
+     */
+    private void suggestCategoryForDescription(String description) {
+        Category category = TransactionSuggestionHelper.getCategoryForDescription(
+                getContentResolver(), description);
+        if (category != null && !mCategoryPicker.isSelected()) {
+            // Only suggest if user hasn't already selected a category
+            mCategoryPicker.setCategory(category);
+        }
     }
 
     @Override
