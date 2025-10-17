@@ -127,6 +127,10 @@ public abstract class MultiPanelFragment extends Fragment implements MultiPanelC
         if (activity instanceof ToolbarController) {
             ((ToolbarController) activity).setToolbar(toolbar);
         }
+        // Force theme application to ensure colors are applied
+        if (toolbar instanceof com.oriondev.moneywallet.ui.view.theme.ThemeEngine.ThemeConsumer) {
+            ((com.oriondev.moneywallet.ui.view.theme.ThemeEngine.ThemeConsumer) toolbar).onApplyTheme(com.oriondev.moneywallet.ui.view.theme.ThemeEngine.getTheme());
+        }
     }
 
     /**

@@ -86,6 +86,10 @@ public abstract class SinglePanelActivity extends BaseActivity implements Toolba
             onMenuCreated(mToolbar.getMenu());
         }
         onToolbarReady(mToolbar);
+        // Force theme application to ensure colors are applied
+        if (mToolbar instanceof com.oriondev.moneywallet.ui.view.theme.ThemeEngine.ThemeConsumer) {
+            ((com.oriondev.moneywallet.ui.view.theme.ThemeEngine.ThemeConsumer) mToolbar).onApplyTheme(com.oriondev.moneywallet.ui.view.theme.ThemeEngine.getTheme());
+        }
     }
 
     protected void onConfigureRootLayout(Bundle savedInstanceState) {

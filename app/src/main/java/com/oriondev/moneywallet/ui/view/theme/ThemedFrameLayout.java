@@ -61,9 +61,13 @@ public class ThemedFrameLayout extends FrameLayout implements ThemeEngine.ThemeC
 
     @Override
     public void onApplyTheme(ITheme theme) {
+        // Always apply theme, even if mBackgroundColor is null (use default primary color)
         if (mBackgroundColor != null) {
             int background = mBackgroundColor.getColor(theme);
             setBackgroundColor(background);
+        } else {
+            // Use default primary color if no background color is specified
+            setBackgroundColor(theme.getColorPrimary());
         }
     }
 }

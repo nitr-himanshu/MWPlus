@@ -56,10 +56,9 @@ public class ThemedAppBarLayout extends AppBarLayout implements ThemeEngine.Them
 
     @Override
     public void onApplyTheme(ITheme theme) {
-        if (mBackgroundColor != null) {
-            int background = getBackgroundColor(theme);
-            setBackgroundColor(background);
-        }
+        // Always apply theme, even if mBackgroundColor is null (use default primary color)
+        int background = getBackgroundColor(theme);
+        setBackgroundColor(background);
     }
 
     private int getBackgroundColor(ITheme theme) {

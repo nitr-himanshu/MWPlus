@@ -26,6 +26,7 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import androidx.annotation.MenuRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.fragment.app.FragmentManager;
@@ -208,6 +209,12 @@ public class NewEditWalletActivity extends NewEditItemActivity implements IconPi
             default:
                 return -1;
         }
+    }
+
+    @Override
+    @MenuRes
+    protected int onInflateMenu() {
+        return R.menu.menu_new_edit_item;
     }
 
     /**
