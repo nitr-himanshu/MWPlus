@@ -63,6 +63,8 @@ public abstract class ThemedActivity extends AppCompatActivity implements ThemeE
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
         onThemeSetup(ThemeEngine.getTheme());
+        // Apply theme to entire view hierarchy to ensure all views are properly themed
+        ThemeEngine.applyTheme(getWindow().getDecorView(), true);
     }
 
     /**
