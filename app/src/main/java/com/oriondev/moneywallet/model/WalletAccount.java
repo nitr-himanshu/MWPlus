@@ -41,13 +41,11 @@ public class WalletAccount extends ProfileDrawerItem {
     private long mId;
     private Money mMoney;
 
-    @Override
     public WalletAccount withIdentifier(long identifier) {
         super.withIdentifier(identifier);
         return this;
     }
 
-    @Override
     public WalletAccount withName(String name) {
         super.withName(name);
         return this;

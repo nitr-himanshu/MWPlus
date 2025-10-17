@@ -284,7 +284,7 @@ public class UtilitySettingFragment extends PreferenceFragmentCompat {
         LockMode lockMode = PreferenceManager.getCurrentLockMode();
         mSecurityModeListPreference.setValue(lockMode.getValueAsString());
         switch (lockMode) {
-            case NONE:
+            case DISABLED:
                 mSecurityModeListPreference.setSummary(R.string.setting_item_security_none);
                 mSecurityModeChangeKeyPreference.setVisible(false);
                 break;

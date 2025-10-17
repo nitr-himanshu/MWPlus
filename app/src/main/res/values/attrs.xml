@@ -99,13 +99,6 @@
         <attr name="theme_backgroundColor" />
     </declare-styleable>
 
-    <declare-styleable name="ThemedPinLockView">
-        <attr name="theme_backgroundColor" />
-    </declare-styleable>
-
-    <declare-styleable name="ThemedPatternLockView">
-        <attr name="theme_backgroundColor" />
-    </declare-styleable>
 
     <declare-styleable name="ThemedImageView">
         <attr name="theme_backgroundColor" />

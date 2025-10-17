@@ -20,12 +20,28 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="MoneyWalletAppTheme" parent="MaterialDrawerTheme.Light.DarkToolbar">
+    <style name="MoneyWalletAppTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <!-- Material 3 color attributes -->
+        <item name="colorPrimaryContainer">@color/colorPrimary</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorOnPrimaryContainer">@android:color/white</item>
+        <item name="colorSecondary">@color/colorAccent</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+        <item name="colorSurface">@android:color/white</item>
+        <item name="colorOnSurface">@color/textPrimary</item>
+        <item name="colorOnSurfaceVariant">@color/textSecondary</item>
         <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <!-- Prevent fullscreen/edge-to-edge mode -->
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:fitsSystemWindows">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 
 </resources>

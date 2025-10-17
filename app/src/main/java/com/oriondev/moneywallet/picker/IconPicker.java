@@ -35,8 +35,8 @@ import android.view.MenuItem;
 import android.widget.EditText;
 
 import com.afollestad.materialdialogs.color.ColorChooserDialog;
-import com.github.rubensousa.bottomsheetbuilder.BottomSheetBuilder;
-import com.github.rubensousa.bottomsheetbuilder.adapter.BottomSheetItemClickListener;
+// import com.github.rubensousa.bottomsheetbuilder.BottomSheetBuilder;
+// import com.github.rubensousa.bottomsheetbuilder.adapter.BottomSheetItemClickListener;
 import com.oriondev.moneywallet.R;
 import com.oriondev.moneywallet.model.ColorIcon;
 import com.oriondev.moneywallet.model.Icon;
@@ -194,51 +194,39 @@ public class IconPicker extends Fragment implements ColorChooserDialog.ColorCall
     public void showPicker() {
         Activity activity = getActivity();
         if (activity != null) {
+            // Simplified approach: directly start the icon picker activity
+            // The bottom sheet functionality is replaced with direct navigation
             if (mCurrentIcon instanceof ColorIcon) {
-                ThemedDialog.buildBottomSheet(activity)
-                        .setMode(BottomSheetBuilder.MODE_LIST)
-                        .addTitleItem(R.string.bottom_sheet_icon_picker_title)
-                        .addItem(1, R.string.bottom_sheet_icon_picker_action_select_icon, R.drawable.ic_add_24dp)
-                        .addItem(2, R.string.bottom_sheet_icon_picker_action_change_bg_color, R.drawable.ic_format_color_fill_black_24dp)
-                        .setItemClickListener(new BottomSheetItemClickListener() {
-
-                            @Override
-                            public void onBottomSheetItemClick(MenuItem item) {
-                                switch (item.getItemId()) {
-                                    case 1:
-                                        startIconPickerActivity();
-                                        break;
-                                    case 2:
-                                        openColorPicker();
-                                        break;
-                                }
+                // For ColorIcon, show options via a simple dialog
+                ThemedDialog.buildMaterialDialog(activity)
+                        .title(R.string.bottom_sheet_icon_picker_title)
+                        .items(R.array.icon_picker_options_color)
+                        .itemsCallback((dialog, itemView, position, text) -> {
+                            switch (position) {
+                                case 0:
+                                    startIconPickerActivity();
+                                    break;
+                                case 1:
+                                    openColorPicker();
+                                    break;
                             }
-
                         })
-                        .createDialog()
                         .show();
             } else if (mCurrentIcon instanceof VectorIcon) {
-                ThemedDialog.buildBottomSheet(activity)
-                        .setMode(BottomSheetBuilder.MODE_LIST)
-                        .addTitleItem(R.string.bottom_sheet_icon_picker_title)
-                        .addItem(1, R.string.bottom_sheet_icon_picker_action_change_icon, R.drawable.ic_add_24dp)
-                        .addItem(2, R.string.bottom_sheet_icon_picker_action_remove_icon, R.drawable.ic_format_color_fill_black_24dp)
-                        .setItemClickListener(new BottomSheetItemClickListener() {
-
-                            @Override
-                            public void onBottomSheetItemClick(MenuItem item) {
-                                switch (item.getItemId()) {
-                                    case 1:
-                                        startIconPickerActivity();
-                                        break;
-                                    case 2:
-                                        restoreColorIcon();
-                                        break;
-                                }
+                // For VectorIcon, show options via a simple dialog
+                ThemedDialog.buildMaterialDialog(activity)
+                        .title(R.string.bottom_sheet_icon_picker_title)
+                        .items(R.array.icon_picker_options_vector)
+                        .itemsCallback((dialog, itemView, position, text) -> {
+                            switch (position) {
+                                case 0:
+                                    startIconPickerActivity();
+                                    break;
+                                case 1:
+                                    restoreColorIcon();
+                                    break;
                             }
-
                         })
-                        .createDialog()
                         .show();
             }
         }

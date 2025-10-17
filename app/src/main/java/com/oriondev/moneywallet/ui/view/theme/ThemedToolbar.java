@@ -67,14 +67,13 @@ public class ThemedToolbar extends Toolbar implements ThemeEngine.ThemeConsumer 
 
     @Override
     public void onApplyTheme(ITheme theme) {
-        if (mBackgroundColor != null) {
-            int background = getBackgroundColor(theme);
-            setBackgroundColor(background);
-            setTitleTextColor(theme);
-            setOverflowButtonColor(theme);
-            setNavigationIconColor(theme);
-            setMenuIconColor(theme);
-        }
+        // Always apply theme, even if mBackgroundColor is null (use default primary color)
+        int background = getBackgroundColor(theme);
+        setBackgroundColor(background);
+        setTitleTextColor(theme);
+        setOverflowButtonColor(theme);
+        setNavigationIconColor(theme);
+        setMenuIconColor(theme);
     }
 
     @Override

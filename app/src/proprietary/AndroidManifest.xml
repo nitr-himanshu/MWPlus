@@ -26,7 +26,8 @@
         <activity
             android:name="com.dropbox.core.android.AuthActivity"
             android:configChanges="orientation|keyboard"
-            android:launchMode="singleTask">
+            android:launchMode="singleTask"
+            android:exported="true">
             <intent-filter>
                 <data android:scheme="db-${DropBoxApiKey}" />
                 <action android:name="android.intent.action.VIEW" />

@@ -104,8 +104,8 @@ public class PlacePickerActivity extends SinglePanelActivity {
 
     @Override
     public boolean onMenuItemClick(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_select_place:
+        int itemId = item.getItemId();
+        if (itemId == R.id.action_select_place) {
                 if (mMapView.isMapReady()) {
                     Coordinates coordinates = mMapView.getCenterCoordinates();
                     Place place = new Place(0L, null, null, null, coordinates);
@@ -114,7 +114,6 @@ public class PlacePickerActivity extends SinglePanelActivity {
                     setResult(RESULT_OK, intent);
                     finish();
                 }
-                break;
         }
         return false;
     }

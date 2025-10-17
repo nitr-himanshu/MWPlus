@@ -41,7 +41,7 @@ public abstract class BaseActivity extends ThemedActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (PreferenceManager.getCurrentLockMode() != LockMode.NONE) {
+        if (PreferenceManager.getCurrentLockMode() != LockMode.DISABLED) {
             if ((System.currentTimeMillis() - PreferenceManager.getLastLockTime()) > MAX_LOCK_TIME_INTERVAL) {
                 mActivityLocked = true;
                 if (mActivityResultOk) {

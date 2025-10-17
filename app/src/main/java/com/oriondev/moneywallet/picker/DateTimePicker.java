@@ -28,9 +28,8 @@ import androidx.fragment.app.FragmentManager;
 import android.view.ViewGroup;
 
 import com.oriondev.moneywallet.ui.view.theme.ThemedDialog;
-import com.philliphsu.bottomsheetpickers.date.DatePickerDialog;
-import com.philliphsu.bottomsheetpickers.time.BottomSheetTimePickerDialog;
-import com.philliphsu.bottomsheetpickers.time.numberpad.NumberPadTimePickerDialog;
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -39,7 +38,7 @@ import java.util.Date;
  * Created by andrea on 07/03/18.
  */
 
-public class DateTimePicker extends Fragment implements DatePickerDialog.OnDateSetListener, BottomSheetTimePickerDialog.OnTimeSetListener {
+public class DateTimePicker extends Fragment implements DatePickerDialog.OnDateSetListener, TimePickerDialog.OnTimeSetListener {
 
     private static final String SS_CURRENT_DATETIME = "DateTimePicker::SavedState::CurrentDateTime";
     private static final String ARG_DEFAULT_DATETIME = "DateTimePicker::Arguments::DefaultDateTime";
@@ -85,16 +84,7 @@ public class DateTimePicker extends Fragment implements DatePickerDialog.OnDateS
                 mDateTime = (Calendar) arguments.getSerializable(ARG_DEFAULT_DATETIME);
             }
         }
-        // check if a date picker or a time picker is already opened and reattach the listener
-        FragmentManager fragmentManager = getChildFragmentManager();
-        DatePickerDialog datePicker = (DatePickerDialog) fragmentManager.findFragmentByTag(getDatePickerTag());
-        if (datePicker != null) {
-            datePicker.setOnDateSetListener(this);
-        }
-        NumberPadTimePickerDialog timePicker = (NumberPadTimePickerDialog) fragmentManager.findFragmentByTag(getTimePickerTag());
-        if (timePicker != null) {
-            timePicker.setOnTimeSetListener(this);
-        }
+        // Fragment manager code removed - now using standard dialogs
     }
 
     @Override
@@ -139,12 +129,11 @@ public class DateTimePicker extends Fragment implements DatePickerDialog.OnDateS
 
     public void showDatePicker() {
         Calendar calendar = mDateTime != null ? mDateTime : Calendar.getInstance();
-        ThemedDialog.buildDatePickerDialog(this,
+        DatePickerDialog dialog = ThemedDialog.buildDatePickerDialog(getContext(), this,
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH))
-                .build()
-                .show(getChildFragmentManager(), getDatePickerTag());
+                calendar.get(Calendar.DAY_OF_MONTH));
+        dialog.show();
     }
 
     private String getDatePickerTag() {
@@ -152,9 +141,12 @@ public class DateTimePicker extends Fragment implements DatePickerDialog.OnDateS
     }
 
     public void showTimePicker() {
-        ThemedDialog.buildNumberPadTimePickerDialog(this, true)
-                .build()
-                .show(getChildFragmentManager(), getTimePickerTag());
+        Calendar calendar = mDateTime != null ? mDateTime : Calendar.getInstance();
+        TimePickerDialog dialog = ThemedDialog.buildNumberPadTimePickerDialog(getContext(), this,
+                calendar.get(Calendar.HOUR_OF_DAY),
+                calendar.get(Calendar.MINUTE),
+                true);
+        dialog.show();
     }
 
     private String getTimePickerTag() {
@@ -168,7 +160,7 @@ public class DateTimePicker extends Fragment implements DatePickerDialog.OnDateS
     }
 
     @Override
-    public void onDateSet(DatePickerDialog dialog, int year, int monthOfYear, int dayOfMonth) {
+    public void onDateSet(android.widget.DatePicker view, int year, int monthOfYear, int dayOfMonth) {
         if (mDateTime == null) {
             mDateTime = Calendar.getInstance();
         }
@@ -177,7 +169,7 @@ public class DateTimePicker extends Fragment implements DatePickerDialog.OnDateS
     }
 
     @Override
-    public void onTimeSet(ViewGroup viewGroup, int hourOfDay, int minute) {
+    public void onTimeSet(android.widget.TimePicker view, int hourOfDay, int minute) {
         mDateTime.set(Calendar.HOUR_OF_DAY, hourOfDay);
         mDateTime.set(Calendar.MINUTE, minute);
         fireCallbackSafely();

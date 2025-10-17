@@ -98,6 +98,10 @@ public abstract class SinglePanelFragment extends Fragment implements Toolbar.On
         if (activity instanceof ToolbarController) {
             ((ToolbarController) activity).setToolbar(toolbar);
         }
+        // Force theme application to ensure colors are applied
+        if (toolbar instanceof com.oriondev.moneywallet.ui.view.theme.ThemeEngine.ThemeConsumer) {
+            ((com.oriondev.moneywallet.ui.view.theme.ThemeEngine.ThemeConsumer) toolbar).onApplyTheme(com.oriondev.moneywallet.ui.view.theme.ThemeEngine.getTheme());
+        }
     }
 
     protected void onMenuCreated(Menu menu) {
