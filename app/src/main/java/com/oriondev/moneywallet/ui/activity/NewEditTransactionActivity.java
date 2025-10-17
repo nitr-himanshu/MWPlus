@@ -803,6 +803,30 @@ public class NewEditTransactionActivity extends NewEditItemActivity implements M
                 mCategoryEditText.setVisibility(View.GONE);
                 break;
         }
+        // Check if we're cloning a transaction and override the default values
+        Intent intent = getIntent();
+        if (savedInstanceState == null && intent.hasExtra("clone_money")) {
+            // Override values with cloned data
+            money = intent.getLongExtra("clone_money", money);
+            if (intent.hasExtra("clone_category")) {
+                category = intent.getParcelableExtra("clone_category");
+            }
+            if (intent.hasExtra("clone_wallet")) {
+                wallet = intent.getParcelableExtra("clone_wallet");
+            }
+            if (intent.hasExtra("clone_event")) {
+                event = intent.getParcelableExtra("clone_event");
+            }
+            if (intent.hasExtra("clone_place")) {
+                place = intent.getParcelableExtra("clone_place");
+            }
+            if (intent.hasExtra("clone_people")) {
+                people = (Person[]) intent.getParcelableArrayExtra("clone_people");
+            }
+            // Don't clone attachments - let user add new ones if needed
+            attachments = null;
+        }
+        
         // now we can create pickers with default values or existing item parameters
         // and update all the views according to the data
         FragmentManager fragmentManager = getSupportFragmentManager();
@@ -817,6 +841,8 @@ public class NewEditTransactionActivity extends NewEditItemActivity implements M
         // check if the intent contains some predefined value for fields
         if (savedInstanceState == null) {
             fillFieldsFromIntent(getIntent());
+            // Check if this is a cloned transaction and restore the cloned data
+            restoreClonedData(getIntent());
         }
     }
 
@@ -839,6 +865,28 @@ public class NewEditTransactionActivity extends NewEditItemActivity implements M
                 }
             }
         }
+    }
+
+    private void restoreClonedData(Intent intent) {
+        // Check if this intent contains cloned transaction data
+        if (!intent.hasExtra("clone_money")) {
+            return; // Not a cloned transaction
+        }
+        
+        // Restore text fields and checkboxes
+        // (Pickers are already initialized with cloned data in onViewCreated)
+        String description = intent.getStringExtra("clone_description");
+        if (description != null) {
+            mDescriptionEditText.setText(description);
+        }
+        
+        String note = intent.getStringExtra("clone_note");
+        if (note != null) {
+            mNoteEditText.setText(note);
+        }
+        
+        mConfirmedCheckBox.setChecked(intent.getBooleanExtra("clone_confirmed", false));
+        mCountInTotalCheckBox.setChecked(intent.getBooleanExtra("clone_count_in_total", true));
     }
 
     @Override
