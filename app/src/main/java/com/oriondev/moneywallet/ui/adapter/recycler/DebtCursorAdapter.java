@@ -165,7 +165,7 @@ public class DebtCursorAdapter extends AbstractCursorAdapter {
         } else {
             holder.mRemainingDaysTextView.setVisibility(View.VISIBLE);
             Context context = holder.mRemainingDaysTextView.getContext();
-            Date date = DateUtils.getDateFromSQLDateString(cursor.getString(mIndexExpirationDate));
+            Date date = DateUtils.getDateFromSQLDateTimeString(cursor.getString(mIndexExpirationDate));
             String formatted = DateFormatter.getFormattedDate(date);
             if (date.getTime() <= System.currentTimeMillis()) {
                 holder.mRemainingDaysTextView.setText(context.getString(R.string.relative_string_ended_on, formatted));
