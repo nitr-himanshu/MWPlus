@@ -21,7 +21,12 @@ package com.oriondev.moneywallet.api.disk;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.Settings;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
@@ -70,45 +75,92 @@ public class DiskBackendService extends AbstractBackendServiceDelegate {
 
     @Override
     public boolean isServiceEnabled(Context context) {
-        String permission = Manifest.permission.WRITE_EXTERNAL_STORAGE;
-        int result = ContextCompat.checkSelfPermission(context, permission);
-        return result == PackageManager.PERMISSION_GRANTED;
+        // For Android 11 (API 30) and above, WRITE_EXTERNAL_STORAGE has limited functionality
+        // and apps should use MANAGE_EXTERNAL_STORAGE or scoped storage
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Check if we have all files access permission
+            return Environment.isExternalStorageManager();
+        } else {
+            // For Android 10 and below, check WRITE_EXTERNAL_STORAGE permission
+            String permission = Manifest.permission.WRITE_EXTERNAL_STORAGE;
+            int result = ContextCompat.checkSelfPermission(context, permission);
+            return result == PackageManager.PERMISSION_GRANTED;
+        }
     }
 
     @Override
     public void setup(final ComponentActivity activity) throws BackendException {
-        final ActivityResultLauncher<String> launcher = activity.registerForActivityResult(
-                new ActivityResultContracts.RequestPermission(),
-                new ActivityResultCallback<Boolean>() {
-                    @Override
-                    public void onActivityResult(Boolean isGranted) {
-                        setBackendServiceEnabled(isGranted);
-                        if (!isGranted) {
-                            setBackendServiceEnabled(false);
-                            ThemedDialog.buildMaterialDialog(activity)
-                                    .title(R.string.title_warning)
-                                    .content(R.string.message_permission_required_not_granted)
-                                    .show();
-                        }
-                    }
-                }
-        );
-        if (ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+        // For Android 11 (API 30) and above, we need to request MANAGE_EXTERNAL_STORAGE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Check if already has permission
+            if (Environment.isExternalStorageManager()) {
+                setBackendServiceEnabled(true);
+                return;
+            }
+            
+            // Show explanation dialog before redirecting to settings
             ThemedDialog.buildMaterialDialog(activity)
                     .title(R.string.title_request_permission)
                     .content(R.string.message_permission_required_external_storage)
                     .positiveText(android.R.string.ok)
                     .negativeText(android.R.string.cancel)
                     .onPositive(new MaterialDialog.SingleButtonCallback() {
-
                         @Override
                         public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
-                            launcher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+                            try {
+                                // Redirect to settings to grant all files access
+                                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                                intent.setData(Uri.parse("package:" + activity.getPackageName()));
+                                activity.startActivity(intent);
+                            } catch (Exception e) {
+                                // Fallback to general storage settings
+                                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                                activity.startActivity(intent);
+                            }
                         }
-
-                    }).show();
+                    })
+                    .onNegative(new MaterialDialog.SingleButtonCallback() {
+                        @Override
+                        public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
+                            setBackendServiceEnabled(false);
+                        }
+                    })
+                    .show();
         } else {
-            launcher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            // For Android 10 and below, request WRITE_EXTERNAL_STORAGE permission
+            final ActivityResultLauncher<String> launcher = activity.registerForActivityResult(
+                    new ActivityResultContracts.RequestPermission(),
+                    new ActivityResultCallback<Boolean>() {
+                        @Override
+                        public void onActivityResult(Boolean isGranted) {
+                            setBackendServiceEnabled(isGranted);
+                            if (!isGranted) {
+                                setBackendServiceEnabled(false);
+                                ThemedDialog.buildMaterialDialog(activity)
+                                        .title(R.string.title_warning)
+                                        .content(R.string.message_permission_required_not_granted)
+                                        .show();
+                            }
+                        }
+                    }
+            );
+            if (ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                ThemedDialog.buildMaterialDialog(activity)
+                        .title(R.string.title_request_permission)
+                        .content(R.string.message_permission_required_external_storage)
+                        .positiveText(android.R.string.ok)
+                        .negativeText(android.R.string.cancel)
+                        .onPositive(new MaterialDialog.SingleButtonCallback() {
+
+                            @Override
+                            public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
+                                launcher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+                            }
+
+                        }).show();
+            } else {
+                launcher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            }
         }
     }
 
