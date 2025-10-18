@@ -40,7 +40,7 @@ public class PeriodViewPagerAdapter extends FragmentPagerAdapter {
     private final Date mEndDate;
 
     public PeriodViewPagerAdapter(FragmentManager fm, Context context, Date startDate, Date endDate) {
-        super(fm);
+        super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
         mContext = context;
         mStartDate = startDate;
         mEndDate = endDate;
