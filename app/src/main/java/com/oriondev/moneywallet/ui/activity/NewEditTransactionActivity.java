@@ -335,15 +335,18 @@ public class NewEditTransactionActivity extends NewEditItemActivity implements M
             @Override
             public void onTextChanged(String text) {
                 // Query for description suggestions
-                List<String> suggestions = TransactionSuggestionHelper.getDescriptionSuggestions(
+                List<com.oriondev.moneywallet.model.SuggestionItem> suggestions = TransactionSuggestionHelper.getDescriptionSuggestions(
                         getContentResolver(), text);
                 mDescriptionEditText.setSuggestions(suggestions);
             }
             
             @Override
-            public void onSuggestionSelected(String suggestion) {
-                // When a suggestion is selected, try to find and suggest the category
-                suggestCategoryForDescription(suggestion);
+            public void onSuggestionSelected(com.oriondev.moneywallet.model.SuggestionItem suggestion) {
+                // When a suggestion is selected, set the category from the suggestion
+                // This ensures the exact category shown in the suggestion is applied
+                if (suggestion != null && suggestion.getCategory() != null) {
+                    mCategoryPicker.setCategory(suggestion.getCategory());
+                }
             }
         });
         mAttachmentView.setController(this);
@@ -352,14 +355,15 @@ public class NewEditTransactionActivity extends NewEditItemActivity implements M
     /**
      * Suggests a category based on the given description by looking up
      * the most recent transaction with the same description.
+     * This will override any existing category selection.
      *
      * @param description The description to look up
      */
     private void suggestCategoryForDescription(String description) {
         Category category = TransactionSuggestionHelper.getCategoryForDescription(
                 getContentResolver(), description);
-        if (category != null && !mCategoryPicker.isSelected()) {
-            // Only suggest if user hasn't already selected a category
+        if (category != null) {
+            // Always set the category when a suggestion is selected, overriding any existing selection
             mCategoryPicker.setCategory(category);
         }
     }
