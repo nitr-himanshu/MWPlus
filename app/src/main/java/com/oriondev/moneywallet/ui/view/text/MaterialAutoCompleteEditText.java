@@ -24,15 +24,20 @@ import android.graphics.Rect;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Filter;
 import android.widget.ListPopupWindow;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import com.oriondev.moneywallet.R;
+import com.oriondev.moneywallet.model.SuggestionItem;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -68,7 +73,7 @@ public class MaterialAutoCompleteEditText extends MaterialEditText {
     }
 
     private void initialize() {
-        mAdapter = new SuggestionAdapter(getContext(), new ArrayList<String>());
+        mAdapter = new SuggestionAdapter(getContext(), new ArrayList<SuggestionItem>());
         
         mPopup = new ListPopupWindow(getContext());
         mPopup.setAnchorView(this);
@@ -77,11 +82,12 @@ public class MaterialAutoCompleteEditText extends MaterialEditText {
         mPopup.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String suggestion = mAdapter.getItem(position);
+                SuggestionItem suggestion = mAdapter.getItem(position);
                 if (suggestion != null) {
                     mBlockCompletion = true;
-                    setText(suggestion);
-                    setSelection(suggestion.length());
+                    String description = suggestion.getDescription();
+                    setText(description);
+                    setSelection(description.length());
                     mBlockCompletion = false;
                     dismissDropDown();
                     
@@ -135,9 +141,9 @@ public class MaterialAutoCompleteEditText extends MaterialEditText {
     /**
      * Update the list of suggestions shown in the dropdown.
      *
-     * @param suggestions List of suggestion strings
+     * @param suggestions List of SuggestionItem objects
      */
-    public void setSuggestions(List<String> suggestions) {
+    public void setSuggestions(List<SuggestionItem> suggestions) {
         if (suggestions != null && !suggestions.isEmpty()) {
             mAdapter.clear();
             mAdapter.addAll(suggestions);
@@ -216,18 +222,45 @@ public class MaterialAutoCompleteEditText extends MaterialEditText {
         /**
          * Called when a suggestion is selected from the dropdown.
          *
-         * @param suggestion The selected suggestion
+         * @param suggestion The selected SuggestionItem containing description and category
          */
-        void onSuggestionSelected(String suggestion);
+        void onSuggestionSelected(SuggestionItem suggestion);
     }
 
     /**
-     * Simple adapter for displaying suggestions in the dropdown.
+     * Adapter for displaying suggestions with description and category in the dropdown.
      */
-    private static class SuggestionAdapter extends ArrayAdapter<String> {
+    private static class SuggestionAdapter extends ArrayAdapter<SuggestionItem> {
         
-        public SuggestionAdapter(@NonNull Context context, @NonNull List<String> objects) {
-            super(context, android.R.layout.simple_dropdown_item_1line, objects);
+        public SuggestionAdapter(@NonNull Context context, @NonNull List<SuggestionItem> objects) {
+            super(context, R.layout.item_suggestion_dropdown, objects);
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            View view = convertView;
+            if (view == null) {
+                LayoutInflater inflater = LayoutInflater.from(getContext());
+                view = inflater.inflate(R.layout.item_suggestion_dropdown, parent, false);
+            }
+            
+            SuggestionItem item = getItem(position);
+            if (item != null) {
+                TextView descriptionText = view.findViewById(R.id.description_text);
+                TextView categoryText = view.findViewById(R.id.category_text);
+                
+                descriptionText.setText(item.getDescription());
+                
+                if (item.getCategoryName() != null && !item.getCategoryName().isEmpty()) {
+                    categoryText.setText(item.getCategoryName());
+                    categoryText.setVisibility(View.VISIBLE);
+                } else {
+                    categoryText.setVisibility(View.GONE);
+                }
+            }
+            
+            return view;
         }
 
         @NonNull

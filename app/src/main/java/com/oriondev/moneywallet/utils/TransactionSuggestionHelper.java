@@ -24,6 +24,7 @@ import android.database.Cursor;
 import android.net.Uri;
 
 import com.oriondev.moneywallet.model.Category;
+import com.oriondev.moneywallet.model.SuggestionItem;
 import com.oriondev.moneywallet.storage.database.Contract;
 import com.oriondev.moneywallet.storage.database.DataContentProvider;
 
@@ -39,7 +40,7 @@ import java.util.Set;
 public class TransactionSuggestionHelper {
 
     private static final int MIN_QUERY_LENGTH = 3;
-    private static final int MAX_SUGGESTIONS = 10;
+    private static final int MAX_SUGGESTIONS = 5;
 
     /**
      * Get description suggestions that match the given query string.
@@ -47,10 +48,10 @@ public class TransactionSuggestionHelper {
      *
      * @param contentResolver The content resolver to query the database
      * @param query The partial description to search for
-     * @return List of matching description strings
+     * @return List of SuggestionItem objects containing description and full category info
      */
-    public static List<String> getDescriptionSuggestions(ContentResolver contentResolver, String query) {
-        List<String> suggestions = new ArrayList<>();
+    public static List<SuggestionItem> getDescriptionSuggestions(ContentResolver contentResolver, String query) {
+        List<SuggestionItem> suggestions = new ArrayList<>();
         
         if (query == null || query.trim().length() < MIN_QUERY_LENGTH) {
             return suggestions;
@@ -60,7 +61,14 @@ public class TransactionSuggestionHelper {
         
         Uri uri = DataContentProvider.CONTENT_TRANSACTIONS;
         String[] projection = new String[] {
-                Contract.Transaction.DESCRIPTION
+                Contract.Transaction.DESCRIPTION,
+                Contract.Transaction.CATEGORY_ID,
+                Contract.Transaction.CATEGORY_NAME,
+                Contract.Transaction.CATEGORY_ICON,
+                Contract.Transaction.CATEGORY_PARENT_ID,
+                Contract.Transaction.CATEGORY_TYPE,
+                Contract.Transaction.CATEGORY_TAG,
+                Contract.Transaction.CATEGORY_SHOW_REPORT
         };
         
         // Query for transactions with descriptions that start with or contain the query
@@ -73,18 +81,45 @@ public class TransactionSuggestionHelper {
         if (cursor != null) {
             try {
                 // Use LinkedHashSet to maintain order while removing duplicates
-                Set<String> uniqueDescriptions = new LinkedHashSet<>();
+                // We'll track unique description+category combinations
+                Set<String> uniqueKeys = new LinkedHashSet<>();
                 
                 int descriptionIndex = cursor.getColumnIndex(Contract.Transaction.DESCRIPTION);
+                int categoryIdIndex = cursor.getColumnIndex(Contract.Transaction.CATEGORY_ID);
+                int categoryNameIndex = cursor.getColumnIndex(Contract.Transaction.CATEGORY_NAME);
+                int categoryIconIndex = cursor.getColumnIndex(Contract.Transaction.CATEGORY_ICON);
+                int categoryTypeIndex = cursor.getColumnIndex(Contract.Transaction.CATEGORY_TYPE);
+                int categoryTagIndex = cursor.getColumnIndex(Contract.Transaction.CATEGORY_TAG);
                 
-                while (cursor.moveToNext() && uniqueDescriptions.size() < MAX_SUGGESTIONS) {
+                while (cursor.moveToNext() && suggestions.size() < MAX_SUGGESTIONS) {
                     String description = cursor.getString(descriptionIndex);
+                    long categoryId = cursor.getLong(categoryIdIndex);
+                    String categoryName = cursor.getString(categoryNameIndex);
+                    String categoryIcon = cursor.getString(categoryIconIndex);
+                    int categoryType = cursor.getInt(categoryTypeIndex);
+                    String categoryTag = cursor.getString(categoryTagIndex);
+                    
                     if (description != null && !description.trim().isEmpty()) {
-                        uniqueDescriptions.add(description.trim());
+                        description = description.trim();
+                        // Create a unique key to avoid duplicates
+                        String uniqueKey = description + "|" + categoryId;
+                        
+                        if (!uniqueKeys.contains(uniqueKey)) {
+                            uniqueKeys.add(uniqueKey);
+                            
+                            // Create full Category object
+                            Category category = new Category(
+                                    categoryId,
+                                    categoryName,
+                                    IconLoader.parse(categoryIcon),
+                                    Contract.CategoryType.fromValue(categoryType),
+                                    categoryTag
+                            );
+                            
+                            suggestions.add(new SuggestionItem(description, categoryName, category));
+                        }
                     }
                 }
-                
-                suggestions.addAll(uniqueDescriptions);
             } finally {
                 cursor.close();
             }
@@ -96,6 +131,7 @@ public class TransactionSuggestionHelper {
     /**
      * Get the most recently used category for a given description.
      * This allows automatic category suggestion when user enters a description they've used before.
+     * This properly handles both parent categories and subcategories.
      *
      * @param contentResolver The content resolver to query the database
      * @param description The exact description to search for
@@ -113,8 +149,10 @@ public class TransactionSuggestionHelper {
                 Contract.Transaction.CATEGORY_ID,
                 Contract.Transaction.CATEGORY_NAME,
                 Contract.Transaction.CATEGORY_ICON,
+                Contract.Transaction.CATEGORY_PARENT_ID,
                 Contract.Transaction.CATEGORY_TYPE,
-                Contract.Transaction.CATEGORY_TAG
+                Contract.Transaction.CATEGORY_TAG,
+                Contract.Transaction.CATEGORY_SHOW_REPORT
         };
         
         // Look for exact match of description
@@ -134,6 +172,8 @@ public class TransactionSuggestionHelper {
                     int categoryType = cursor.getInt(cursor.getColumnIndex(Contract.Transaction.CATEGORY_TYPE));
                     String categoryTag = cursor.getString(cursor.getColumnIndex(Contract.Transaction.CATEGORY_TAG));
                     
+                    // Create category with full information including tag for proper identification
+                    // The category ID is already the correct one (parent or subcategory)
                     return new Category(
                             categoryId,
                             categoryName,
@@ -153,6 +193,7 @@ public class TransactionSuggestionHelper {
     /**
      * Get the most recently used category for a given partial description.
      * This is useful for suggesting categories as the user types.
+     * This properly handles both parent categories and subcategories.
      *
      * @param contentResolver The content resolver to query the database
      * @param partialDescription The partial description to search for
@@ -170,8 +211,10 @@ public class TransactionSuggestionHelper {
                 Contract.Transaction.CATEGORY_ID,
                 Contract.Transaction.CATEGORY_NAME,
                 Contract.Transaction.CATEGORY_ICON,
+                Contract.Transaction.CATEGORY_PARENT_ID,
                 Contract.Transaction.CATEGORY_TYPE,
                 Contract.Transaction.CATEGORY_TAG,
+                Contract.Transaction.CATEGORY_SHOW_REPORT,
                 Contract.Transaction.DESCRIPTION
         };
         
@@ -192,6 +235,8 @@ public class TransactionSuggestionHelper {
                     int categoryType = cursor.getInt(cursor.getColumnIndex(Contract.Transaction.CATEGORY_TYPE));
                     String categoryTag = cursor.getString(cursor.getColumnIndex(Contract.Transaction.CATEGORY_TAG));
                     
+                    // Create category with full information including tag for proper identification
+                    // The category ID is already the correct one (parent or subcategory)
                     return new Category(
                             categoryId,
                             categoryName,
