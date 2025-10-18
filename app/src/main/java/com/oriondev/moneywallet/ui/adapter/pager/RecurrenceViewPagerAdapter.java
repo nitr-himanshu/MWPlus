@@ -36,7 +36,7 @@ public class RecurrenceViewPagerAdapter extends FragmentPagerAdapter {
     private final Context mContext;
 
     public RecurrenceViewPagerAdapter(FragmentManager fm, Context context) {
-        super(fm);
+        super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
         mContext = context;
     }
 

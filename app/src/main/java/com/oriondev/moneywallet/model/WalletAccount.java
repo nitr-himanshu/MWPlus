@@ -23,13 +23,17 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.view.View;
 import androidx.annotation.DrawableRes;
 
 import com.mikepenz.iconics.typeface.IIcon;
 import com.mikepenz.materialdrawer.holder.StringHolder;
 import com.mikepenz.materialdrawer.model.ProfileDrawerItem;
+import com.mikepenz.materialdrawer.model.interfaces.IProfile;
 import com.oriondev.moneywallet.utils.IconLoader;
 import com.oriondev.moneywallet.utils.MoneyFormatter;
+
+import java.util.List;
 
 /**
  * Created by andrea on 23/01/18.
@@ -124,5 +128,12 @@ public class WalletAccount extends ProfileDrawerItem {
     public WalletAccount withMoney(Money money) {
         mMoney = money;
         return this;
+    }
+
+    @Override
+    public void bindView(ViewHolder holder, List payloads) {
+        super.bindView(holder, payloads);
+        // Set the tag to satisfy FastAdapter requirements
+        holder.itemView.setTag(this);
     }
 }

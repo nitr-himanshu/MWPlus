@@ -35,7 +35,7 @@ public class SavingViewPagerAdapter extends FragmentPagerAdapter {
     private final Context mContext;
 
     public SavingViewPagerAdapter(FragmentManager fm, Context context) {
-        super(fm);
+        super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
         mContext = context;
     }
 

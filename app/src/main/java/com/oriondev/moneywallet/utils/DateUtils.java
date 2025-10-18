@@ -48,11 +48,18 @@ public class DateUtils {
     }
 
     public static Date getDateFromSQLDateTimeString(String dateTime) {
-        DateFormat dateFormat = new SimpleDateFormat(SQL_DATETIME, Locale.ENGLISH);
+        // Try parsing as datetime first
+        DateFormat dateTimeFormat = new SimpleDateFormat(SQL_DATETIME, Locale.ENGLISH);
         try {
-            return dateFormat.parse(dateTime);
+            return dateTimeFormat.parse(dateTime);
         } catch (ParseException e) {
-            throw new RuntimeException(e);
+            // If that fails, try parsing as date only
+            DateFormat dateFormat = new SimpleDateFormat(SQL_DATE, Locale.ENGLISH);
+            try {
+                return dateFormat.parse(dateTime);
+            } catch (ParseException ex) {
+                throw new RuntimeException(ex);
+            }
         }
     }
 

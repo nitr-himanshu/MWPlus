@@ -38,7 +38,7 @@ public class CategoryViewPagerAdapter extends FragmentPagerAdapter {
     private final boolean mShowSystemCategories;
 
     public CategoryViewPagerAdapter(FragmentManager fm, Context context, boolean showSubCategories, boolean showSystemCategories) {
-        super(fm);
+        super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
         mContext = context;
         mShowSubCategories = showSubCategories;
         mShowSystemCategories = showSystemCategories;

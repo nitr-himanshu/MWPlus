@@ -35,7 +35,7 @@ public class BudgetViewPagerAdapter extends FragmentPagerAdapter {
     private final Context mContext;
 
     public BudgetViewPagerAdapter(FragmentManager fm, Context context) {
-        super(fm);
+        super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
         mContext = context;
     }
 
