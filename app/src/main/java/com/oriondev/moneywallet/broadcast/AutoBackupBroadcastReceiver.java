@@ -26,6 +26,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
+import com.oriondev.moneywallet.api.AbstractBackendServiceDelegate;
 import com.oriondev.moneywallet.api.BackendServiceFactory;
 import com.oriondev.moneywallet.model.IFile;
 import com.oriondev.moneywallet.service.BackupHandlerIntentService;
@@ -101,6 +102,14 @@ public class AutoBackupBroadcastReceiver extends BroadcastReceiver {
                 long nextOccurrence = lastTimestamp + (hourOffset * MILLIS_IN_HOUR);
                 if (nextOccurrence <= System.currentTimeMillis()) {
                     if (!BackendManager.isAutoBackupWhenDataIsChangedOnly(backendId) || PreferenceManager.getLastTimeDataIsChanged() > lastTimestamp) {
+                        // Check if the backend service has required permissions before attempting backup
+                        AbstractBackendServiceDelegate backendService = BackendServiceFactory.getServiceById(backendId, null);
+                        if (backendService != null && !backendService.isServiceEnabled(context)) {
+                            // Backend service doesn't have required permissions, disable auto-backup
+                            System.out.println("[ALARM] AutoBackup skipped for " + backendId + ": permissions not granted");
+                            BackendManager.setAutoBackupEnabled(backendId, false);
+                            continue;
+                        }
                         boolean onlyOnWiFi = BackendManager.isAutoBackupOnWiFiOnly(backendId);
                         IFile folder = BackendServiceFactory.getFile(backendId, BackendManager.getAutoBackupFolder(backendId));
                         String password = BackendManager.getAutoBackupPassword(backendId);
