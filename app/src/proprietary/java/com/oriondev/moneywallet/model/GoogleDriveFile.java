@@ -22,16 +22,12 @@ package com.oriondev.moneywallet.model;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import com.google.android.gms.drive.DriveFile;
-import com.google.android.gms.drive.DriveFolder;
-import com.google.android.gms.drive.DriveId;
-import com.google.android.gms.drive.Metadata;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
  * Created by andre on 21/03/2018.
+ * Updated to use Google Drive REST API v3
  */
 public class GoogleDriveFile implements IFile, Parcelable {
 
@@ -39,31 +35,37 @@ public class GoogleDriveFile implements IFile, Parcelable {
     private static final String NAME = "name";
     private static final String SIZE = "size";
     private static final String DIRECTORY = "directory";
+    private static final String MIME_TYPE_FOLDER = "application/vnd.google-apps.folder";
 
-    private final DriveId mDriveId;
+    private final String mId;
     private final String mName;
     private final long mSize;
-
     private final boolean mIsDirectory;
 
     private GoogleDriveFile(Parcel in) {
-        mDriveId = in.readParcelable(DriveId.class.getClassLoader());
+        mId = in.readString();
         mName = in.readString();
         mSize = in.readLong();
         mIsDirectory = in.readByte() != 0;
     }
 
-    public GoogleDriveFile(Metadata metadata) {
-        mDriveId = metadata.getDriveId();
-        mName = metadata.getTitle();
-        mSize = metadata.getFileSize();
-        mIsDirectory = metadata.isFolder();
+    /**
+     * Constructor for REST API v3 File object
+     */
+    public GoogleDriveFile(com.google.api.services.drive.model.File file) {
+        mId = file.getId();
+        mName = file.getName();
+        mIsDirectory = MIME_TYPE_FOLDER.equals(file.getMimeType());
+        
+        // Size might be null for folders or Google Docs
+        Long size = file.getSize();
+        mSize = (size != null) ? size : 0L;
     }
 
     public GoogleDriveFile(String encoded) {
         try {
             JSONObject object = new JSONObject(encoded);
-            mDriveId = DriveId.decodeFromString(object.getString(ID));
+            mId = object.getString(ID);
             mName = object.optString(NAME);
             mSize = object.optLong(SIZE);
             mIsDirectory = object.getBoolean(DIRECTORY);
@@ -111,7 +113,7 @@ public class GoogleDriveFile implements IFile, Parcelable {
     public String encodeToString() {
         try {
             JSONObject object = new JSONObject();
-            object.put(ID, mDriveId.encodeToString());
+            object.put(ID, mId);
             object.put(NAME, mName);
             object.put(SIZE, mSize);
             object.put(DIRECTORY, mIsDirectory);
@@ -121,12 +123,11 @@ public class GoogleDriveFile implements IFile, Parcelable {
         }
     }
 
-    public DriveFolder getDriveFolder() {
-        return mDriveId.asDriveFolder();
-    }
-
-    public DriveFile getDriveFile() {
-        return mDriveId.asDriveFile();
+    /**
+     * Get the file ID for REST API v3
+     */
+    public String getId() {
+        return mId;
     }
 
     @Override
@@ -136,7 +137,7 @@ public class GoogleDriveFile implements IFile, Parcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeParcelable(mDriveId, flags);
+        dest.writeString(mId);
         dest.writeString(mName);
         dest.writeLong(mSize);
         dest.writeByte((byte) (mIsDirectory ? 1 : 0));

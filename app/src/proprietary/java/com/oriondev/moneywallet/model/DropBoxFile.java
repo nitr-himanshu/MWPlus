@@ -25,7 +25,6 @@ import android.os.Parcelable;
 import com.dropbox.core.v2.files.FileMetadata;
 import com.dropbox.core.v2.files.FolderMetadata;
 import com.dropbox.core.v2.files.Metadata;
-import com.google.android.gms.drive.DriveId;
 
 import org.json.JSONException;
 import org.json.JSONObject;

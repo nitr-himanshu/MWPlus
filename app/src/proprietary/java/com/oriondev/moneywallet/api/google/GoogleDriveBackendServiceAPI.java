@@ -24,15 +24,14 @@ import androidx.annotation.NonNull;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
-import com.google.android.gms.drive.Drive;
-import com.google.android.gms.drive.DriveContents;
-import com.google.android.gms.drive.DriveFile;
-import com.google.android.gms.drive.DriveFolder;
-import com.google.android.gms.drive.DriveResourceClient;
-import com.google.android.gms.drive.Metadata;
-import com.google.android.gms.drive.MetadataBuffer;
-import com.google.android.gms.drive.MetadataChangeSet;
-import com.google.android.gms.tasks.Tasks;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.http.FileContent;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.DriveScopes;
+import com.google.api.services.drive.model.FileList;
 import com.oriondev.moneywallet.api.AbstractBackendServiceAPI;
 import com.oriondev.moneywallet.api.BackendException;
 import com.oriondev.moneywallet.model.GoogleDriveFile;
@@ -40,51 +39,80 @@ import com.oriondev.moneywallet.model.IFile;
 import com.oriondev.moneywallet.utils.ProgressInputStream;
 import com.oriondev.moneywallet.utils.ProgressOutputStream;
 
-import org.apache.commons.io.IOUtils;
-
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Created by andrea on 24/11/18.
+ * Updated to use Google Drive REST API v3
  */
 public class GoogleDriveBackendServiceAPI extends AbstractBackendServiceAPI<GoogleDriveFile> {
 
     private static final String MIME_TYPE_FOLDER = "application/vnd.google-apps.folder";
+    private static final String APP_FOLDER_NAME = "MoneyWallet";
 
-    private final DriveResourceClient mDriveResourceClient;
+    private final Drive mDriveService;
+    private final String mAppFolderId;
 
     public GoogleDriveBackendServiceAPI(Context context) throws BackendException {
         super(GoogleDriveFile.class);
         GoogleSignInAccount signInAccount = GoogleSignIn.getLastSignedInAccount(context);
         if (signInAccount != null) {
-            mDriveResourceClient = Drive.getDriveResourceClient(context, signInAccount);
+            try {
+                GoogleAccountCredential credential = GoogleAccountCredential.usingOAuth2(
+                        context, Collections.singletonList(DriveScopes.DRIVE_FILE));
+                credential.setSelectedAccountName(signInAccount.getEmail());
+                
+                JsonFactory jsonFactory = GsonFactory.getDefaultInstance();
+                mDriveService = new Drive.Builder(
+                        new NetHttpTransport(),
+                        jsonFactory,
+                        credential)
+                        .setApplicationName("MoneyWallet")
+                        .build();
+                
+                mAppFolderId = getOrCreateAppFolder();
+            } catch (IOException e) {
+                throw new BackendException("Failed to initialize Google Drive: " + e.getMessage(), true);
+            } catch (Exception e) {
+                String errorMessage = e.getMessage();
+                if (errorMessage == null || errorMessage.trim().isEmpty()) {
+                    errorMessage = "Unknown initialization error";
+                }
+                throw new BackendException("Google Drive initialization error: " + errorMessage, false);
+            }
         } else {
-            throw new BackendException("GoogleDrive backend cannot be initialized: account is null");
+            throw new BackendException("Google Drive account not signed in", false);
         }
     }
 
     @Override
     public GoogleDriveFile upload(GoogleDriveFile folder, File file, ProgressInputStream.UploadProgressListener listener) throws BackendException {
-        try (InputStream inputStream = new ProgressInputStream(file, listener)) {
-            DriveContents driveContents = Tasks.await(mDriveResourceClient.createContents());
-            OutputStream outputStream = driveContents.getOutputStream();
-            IOUtils.copy(inputStream, outputStream);
-            outputStream.close();
-            MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
-                    .setTitle(file.getName())
-                    .setStarred(true)
-                    .build();
-            DriveFolder driveFolder = getFolder(folder);
-            DriveFile driveFile = Tasks.await(mDriveResourceClient.createFile(driveFolder, changeSet, driveContents));
-            return new GoogleDriveFile(Tasks.await(mDriveResourceClient.getMetadata(driveFile)));
-        } catch (IOException | InterruptedException | ExecutionException e) {
-            throw new BackendException(e.getMessage(), isRecoverable(e));
+        try (ProgressInputStream inputStream = new ProgressInputStream(file, listener)) {
+            String parentFolderId = (folder != null) ? folder.getId() : mAppFolderId;
+            
+            com.google.api.services.drive.model.File fileMetadata = new com.google.api.services.drive.model.File();
+            fileMetadata.setName(file.getName());
+            fileMetadata.setParents(Collections.singletonList(parentFolderId));
+            
+            com.google.api.client.http.InputStreamContent mediaContent = 
+                new com.google.api.client.http.InputStreamContent("application/octet-stream", inputStream);
+            mediaContent.setLength(file.length());
+            
+            com.google.api.services.drive.model.File uploadedFile = mDriveService.files()
+                    .create(fileMetadata, mediaContent)
+                    .setFields("id, name, mimeType, size, modifiedTime, parents")
+                    .execute();
+            
+            return new GoogleDriveFile(uploadedFile);
+        } catch (IOException e) {
+            throw new BackendException("Failed to upload file: " + e.getMessage(), true);
+        } catch (Exception e) {
+            throw new BackendException("Upload error: " + e.getMessage(), false);
         }
     }
 
@@ -92,13 +120,12 @@ public class GoogleDriveBackendServiceAPI extends AbstractBackendServiceAPI<Goog
     public File download(File folder, @NonNull GoogleDriveFile file, ProgressOutputStream.DownloadProgressListener listener) throws BackendException {
         File destination = new File(folder, file.getName());
         try (OutputStream outputStream = new ProgressOutputStream(destination, file.getSize(), listener)) {
-            DriveFile driveFile = file.getDriveFile();
-            DriveContents driveContents = Tasks.await(mDriveResourceClient.openFile(driveFile, DriveFile.MODE_READ_ONLY));
-            InputStream inputStream = driveContents.getInputStream();
-            IOUtils.copy(inputStream, outputStream);
-            inputStream.close();
-        } catch (IOException | InterruptedException | ExecutionException e) {
-            throw new BackendException(e.getMessage(), isRecoverable(e));
+            mDriveService.files().get(file.getId())
+                    .executeMediaAndDownloadTo(outputStream);
+        } catch (IOException e) {
+            throw new BackendException("Failed to download file: " + e.getMessage(), true);
+        } catch (Exception e) {
+            throw new BackendException("Download error: " + e.getMessage(), false);
         }
         return destination;
     }
@@ -107,14 +134,24 @@ public class GoogleDriveBackendServiceAPI extends AbstractBackendServiceAPI<Goog
     public List<IFile> list(GoogleDriveFile folder) throws BackendException {
         List<IFile> fileList = new ArrayList<>();
         try {
-            DriveFolder driveFolder = getFolder(folder);
-            MetadataBuffer buffer = Tasks.await(mDriveResourceClient.listChildren(driveFolder));
-            for (Metadata metadata : buffer) {
-                fileList.add(new GoogleDriveFile(metadata));
+            String parentFolderId = (folder != null) ? folder.getId() : mAppFolderId;
+            String query = "'" + parentFolderId + "' in parents and trashed=false";
+            
+            FileList result = mDriveService.files().list()
+                    .setQ(query)
+                    .setFields("files(id, name, mimeType, size, modifiedTime, parents)")
+                    .setSpaces("drive")
+                    .execute();
+            
+            if (result.getFiles() != null) {
+                for (com.google.api.services.drive.model.File driveFile : result.getFiles()) {
+                    fileList.add(new GoogleDriveFile(driveFile));
+                }
             }
-            buffer.release();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new BackendException(e.getMessage(), isRecoverable(e));
+        } catch (IOException e) {
+            throw new BackendException("Failed to list files: " + e.getMessage(), true);
+        } catch (Exception e) {
+            throw new BackendException("List error: " + e.getMessage(), false);
         }
         return fileList;
     }
@@ -122,31 +159,65 @@ public class GoogleDriveBackendServiceAPI extends AbstractBackendServiceAPI<Goog
     @Override
     protected GoogleDriveFile newFolder(GoogleDriveFile parent, String name) throws BackendException {
         try {
-            DriveFolder driveFolder = getFolder(parent);
-            MetadataChangeSet changeSet = new MetadataChangeSet.Builder()
-                    .setTitle(name)
-                    .setMimeType(MIME_TYPE_FOLDER)
-                    .setStarred(true)
-                    .build();
-            DriveFolder folder = Tasks.await(mDriveResourceClient.createFolder(driveFolder, changeSet));
-            return new GoogleDriveFile(Tasks.await(mDriveResourceClient.getMetadata(folder)));
-        } catch (ExecutionException | InterruptedException e) {
-            throw new BackendException(e.getMessage(), isRecoverable(e));
+            String parentFolderId = (parent != null) ? parent.getId() : mAppFolderId;
+            
+            com.google.api.services.drive.model.File fileMetadata = new com.google.api.services.drive.model.File();
+            fileMetadata.setName(name);
+            fileMetadata.setMimeType(MIME_TYPE_FOLDER);
+            fileMetadata.setParents(Collections.singletonList(parentFolderId));
+            
+            com.google.api.services.drive.model.File createdFolder = mDriveService.files()
+                    .create(fileMetadata)
+                    .setFields("id, name, mimeType, modifiedTime, parents")
+                    .execute();
+            
+            return new GoogleDriveFile(createdFolder);
+        } catch (IOException e) {
+            throw new BackendException("Failed to create folder: " + e.getMessage(), true);
+        } catch (Exception e) {
+            throw new BackendException("Folder creation error: " + e.getMessage(), false);
         }
     }
 
-    private DriveFolder getFolder(GoogleDriveFile folder) throws BackendException {
-        if (folder == null) {
-            try {
-                return Tasks.await(mDriveResourceClient.getAppFolder());
-            } catch (ExecutionException | InterruptedException e) {
-                throw new BackendException(e.getMessage(), isRecoverable(e));
+    private String getOrCreateAppFolder() throws IOException, BackendException {
+        try {
+            // First, try to find existing app folder in root
+            String query = "name='" + APP_FOLDER_NAME + "' and mimeType='" + MIME_TYPE_FOLDER + 
+                          "' and trashed=false and 'root' in parents";
+            
+            FileList result = mDriveService.files().list()
+                    .setQ(query)
+                    .setSpaces("drive")
+                    .setFields("files(id, name)")
+                    .execute();
+            
+            if (result.getFiles() != null && !result.getFiles().isEmpty()) {
+                return result.getFiles().get(0).getId();
             }
+            
+            // Create new app folder if not found
+            com.google.api.services.drive.model.File fileMetadata = new com.google.api.services.drive.model.File();
+            fileMetadata.setName(APP_FOLDER_NAME);
+            fileMetadata.setMimeType(MIME_TYPE_FOLDER);
+            
+            com.google.api.services.drive.model.File createdFolder = mDriveService.files()
+                    .create(fileMetadata)
+                    .setFields("id, name, mimeType, modifiedTime, parents")
+                    .execute();
+            
+            if (createdFolder != null && createdFolder.getId() != null) {
+                return createdFolder.getId();
+            } else {
+                throw new BackendException("Failed to create app folder: API returned null response", true);
+            }
+        } catch (IOException e) {
+            throw new BackendException("Network error accessing Google Drive: " + e.getMessage(), true);
+        } catch (Exception e) {
+            String errorMessage = e.getMessage();
+            if (errorMessage == null || errorMessage.trim().isEmpty()) {
+                errorMessage = "Unknown error occurred";
+            }
+            throw new BackendException("Failed to get/create app folder: " + errorMessage, true);
         }
-        return folder.getDriveFolder();
-    }
-
-    private boolean isRecoverable(Exception e) {
-        return e instanceof IOException;
     }
 }
