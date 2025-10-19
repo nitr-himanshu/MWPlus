@@ -30,9 +30,9 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.Scope;
-import com.google.android.gms.drive.Drive;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.api.services.drive.DriveScopes;
 import com.oriondev.moneywallet.R;
 import com.oriondev.moneywallet.api.AbstractBackendServiceDelegate;
 import com.oriondev.moneywallet.api.BackendException;
@@ -43,13 +43,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 import androidx.activity.ComponentActivity;
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 
 /**
  * Created by andrea on 21/11/18.
+ * Updated to use Google Drive REST API v3
  */
 public class GoogleDriveBackendService extends AbstractBackendServiceDelegate {
 
@@ -81,9 +79,8 @@ public class GoogleDriveBackendService extends AbstractBackendServiceDelegate {
 
     @Override
     public boolean isServiceEnabled(Context context) {
-        Set<Scope> requiredScopes = new HashSet<>(2);
-        requiredScopes.add(Drive.SCOPE_FILE);
-        requiredScopes.add(Drive.SCOPE_APPFOLDER);
+        Set<Scope> requiredScopes = new HashSet<>(1);
+        requiredScopes.add(new Scope(DriveScopes.DRIVE_FILE));
         GoogleSignInAccount signInAccount = GoogleSignIn.getLastSignedInAccount(context);
         return signInAccount != null && signInAccount.getGrantedScopes().containsAll(requiredScopes);
     }
@@ -91,25 +88,12 @@ public class GoogleDriveBackendService extends AbstractBackendServiceDelegate {
     @Override
     public void setup(ComponentActivity activity) throws BackendException {
         GoogleSignInOptions signInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestScopes(Drive.SCOPE_FILE)
-                .requestScopes(Drive.SCOPE_APPFOLDER)
+                .requestScopes(new Scope(DriveScopes.DRIVE_FILE))
+                .requestEmail()
                 .build();
         GoogleSignInClient googleSignInClient = GoogleSignIn.getClient(activity, signInOptions);
-        activity.registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                new ActivityResultCallback<ActivityResult>() {
-                    @Override
-                    public void onActivityResult(ActivityResult result) {
-                        Task<GoogleSignInAccount> getAccountTask = GoogleSignIn
-                                .getSignedInAccountFromIntent(result.getData());
-                        if (getAccountTask.isSuccessful()) {
-                            setBackendServiceEnabled(true);
-                        } else {
-                            setBackendServiceEnabled(false);
-                        }
-                    }
-                }
-        ).launch(googleSignInClient.getSignInIntent());
+        Intent signInIntent = googleSignInClient.getSignInIntent();
+        activity.startActivityForResult(signInIntent, REQUEST_CODE_SIGN_IN);
     }
 
     @Override
@@ -132,8 +116,7 @@ public class GoogleDriveBackendService extends AbstractBackendServiceDelegate {
 
     private void signOutFromGoogle(Activity activity) {
         GoogleSignInOptions signInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestScopes(Drive.SCOPE_FILE)
-                .requestScopes(Drive.SCOPE_APPFOLDER)
+                .requestScopes(new Scope(DriveScopes.DRIVE_FILE))
                 .build();
         GoogleSignInClient googleSignInClient = GoogleSignIn.getClient(activity, signInOptions);
         Task<Void> signOutTask = googleSignInClient.signOut();
@@ -149,7 +132,15 @@ public class GoogleDriveBackendService extends AbstractBackendServiceDelegate {
 
     @Override
     public boolean handleActivityResult(Context context, int requestCode, int resultCode, Intent data) {
-        // Do nothing. This is handled by the ActivityResultCallback.
+        if (requestCode == REQUEST_CODE_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            if (task.isSuccessful()) {
+                setBackendServiceEnabled(true);
+            } else {
+                setBackendServiceEnabled(false);
+            }
+            return true;
+        }
         return false;
     }
 }

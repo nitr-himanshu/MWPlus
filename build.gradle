@@ -58,8 +58,11 @@ ext {
             auth: "com.google.android.gms:play-services-auth:21.2.0",
             signin: "com.google.android.gms:play-services-identity:18.0.1",
             location: "com.google.android.gms:play-services-location:21.3.0",
-            places: "com.google.android.gms:play-services-places:17.0.0",
-            drive: "com.google.android.gms:play-services-drive:17.0.0"
+            places: "com.google.android.gms:play-services-places:17.0.0"
+    ]
+    googleDriveApi = [
+            client: "com.google.api-client:google-api-client-android:2.2.0",
+            drive: "com.google.apis:google-api-services-drive:v3-rev20230520-2.0.0"
     ]
 }
 

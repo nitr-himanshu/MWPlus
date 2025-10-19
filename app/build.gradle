@@ -34,7 +34,7 @@ android {
     
     
     defaultConfig {
-        applicationId "com.oriondev.moneywallet"
+        applicationId "com.hkeshri.moneywalletplus"
         minSdk 21
         targetSdk 35
         versionCode 75
@@ -85,6 +85,12 @@ android {
     lint {
         abortOnError false
         checkReleaseBuilds false
+    }
+    
+    packaging {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/license.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt', 'META-INF/notice.txt', 'META-INF/ASL2.0']
+        }
     }
 }
 
@@ -142,7 +148,12 @@ dependencies {
     proprietaryImplementation('com.dropbox.core:dropbox-core-sdk:3.0.8')
     proprietaryImplementation googlePlayServices.auth
     proprietaryImplementation googlePlayServices.signin
-    proprietaryImplementation googlePlayServices.drive
+    // Google Drive REST API v3
+    proprietaryImplementation googleDriveApi.client
+    proprietaryImplementation googleDriveApi.drive
+    proprietaryImplementation('com.google.http-client:google-http-client-gson:1.43.3') {
+        exclude group: 'org.apache.httpcomponents'
+    }
     // google-map dependencies
     gmapImplementation googlePlayServices.places
     // floss dependencies

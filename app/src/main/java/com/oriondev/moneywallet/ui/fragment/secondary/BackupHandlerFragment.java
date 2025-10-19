@@ -25,6 +25,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.util.Log;
 import androidx.annotation.MenuRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -69,6 +70,7 @@ import java.util.List;
  */
 public class BackupHandlerFragment extends Fragment implements BackupFileAdapter.Controller, SwipeRefreshLayout.OnRefreshListener, Toolbar.OnMenuItemClickListener, AbstractBackendServiceDelegate.BackendServiceStatusListener {
 
+    private static final String TAG = "BackupHandlerFragment";
     private static final String ARG_ALLOW_BACKUP = "BackupHandlerFragment::Arguments::AllowBackup";
     private static final String ARG_ALLOW_RESTORE = "BackupHandlerFragment::Arguments::AllowRestore";
     private static final String ARG_BACKEND_ID = "BackupHandlerFragment::Arguments::BackendId";
@@ -481,16 +483,31 @@ public class BackupHandlerFragment extends Fragment implements BackupFileAdapter
                 int operation = intent.getIntExtra(BackupHandlerIntentService.ACTION, 0);
                 if (operation == BackupHandlerIntentService.ACTION_LIST) {
                     Exception exception = (Exception) intent.getSerializableExtra(BackupHandlerIntentService.EXCEPTION);
-                    if (exception instanceof BackendException && ((BackendException) exception).isRecoverable()) {
+                    if (exception instanceof BackendException) {
+                        BackendException backendException = (BackendException) exception;
+                        if (backendException.isRecoverable()) {
+                            mBackupAdapter.setFileList(null, false);
+                            mAdvancedRecyclerView.setErrorText(R.string.message_error_backend_recoverable);
+                            mAdvancedRecyclerView.setState(AdvancedRecyclerView.State.ERROR);
+                        } else {
+                            // For Google Drive, show error instead of automatic teardown
+                            if (mBackendService != null && BackendServiceFactory.SERVICE_ID_GOOGLE_DRIVE.equals(mBackendService.getId())) {
+                                mBackupAdapter.setFileList(null, false);
+                                mAdvancedRecyclerView.setErrorText(R.string.message_error_backend_recoverable);
+                                mAdvancedRecyclerView.setState(AdvancedRecyclerView.State.ERROR);
+                            } else {
+                                try {
+                                    mBackendService.teardown(getActivity());
+                                } catch (BackendException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    } else {
+                        // Handle other types of exceptions
                         mBackupAdapter.setFileList(null, false);
                         mAdvancedRecyclerView.setErrorText(R.string.message_error_backend_recoverable);
                         mAdvancedRecyclerView.setState(AdvancedRecyclerView.State.ERROR);
-                    } else {
-                        try {
-                            mBackendService.teardown(getActivity());
-                        } catch (BackendException e) {
-                            e.printStackTrace();
-                        }
                     }
                 }
             }
