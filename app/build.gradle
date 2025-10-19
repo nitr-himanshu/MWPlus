@@ -34,7 +34,7 @@ android {
     
     
     defaultConfig {
-        applicationId "com.oriondev.moneywallet"
+        applicationId "com.hkeshri.moneywalletplus"
         minSdk 21
         targetSdk 35
         versionCode 75
