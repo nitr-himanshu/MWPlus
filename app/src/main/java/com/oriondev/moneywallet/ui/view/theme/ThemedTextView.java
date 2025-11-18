@@ -91,11 +91,8 @@ public class ThemedTextView extends AppCompatTextView implements ThemeEngine.The
                     setTextColor(theme.getBestTextColor(theme.getColorAccent()));
                     break;
                 default:
-                    System.out.println("{WARN} UNKNOWN");
                     break;
             }
-        } else {
-            System.out.println("{WARN} IS NULL WTF?");
         }
     }
 

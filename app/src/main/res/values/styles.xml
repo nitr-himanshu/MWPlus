@@ -34,6 +34,9 @@
         <item name="colorSurface">@android:color/white</item>
         <item name="colorOnSurface">@color/textPrimary</item>
         <item name="colorOnSurfaceVariant">@color/textSecondary</item>
+        <!-- Text color attributes for better consistency -->
+        <item name="android:textColorPrimary">@color/textPrimary</item>
+        <item name="android:textColorSecondary">@color/textSecondary</item>
         <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>

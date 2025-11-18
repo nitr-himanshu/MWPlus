@@ -20,6 +20,7 @@
 
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="@dimen/view_mti_month_width"
     android:layout_height="wrap_content"
@@ -40,7 +41,7 @@
         android:layout_height="12dp"
         android:layout_gravity="center_horizontal"/>
 
-    <TextView
+    <com.oriondev.moneywallet.ui.view.theme.ThemedTextView
         android:id="@+id/mti_month_lbl"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -49,6 +50,7 @@
         android:gravity="center"
         android:maxLength="8"
         android:textSize="@dimen/view_mti_month_lbl_text"
+        app:theme_textColor="textColorPrimary"
         tools:text="Feb\n17"/>
 
 </FrameLayout>

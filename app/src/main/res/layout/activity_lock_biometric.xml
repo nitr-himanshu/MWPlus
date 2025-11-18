@@ -40,7 +40,7 @@
         app:tint="@android:color/white" />
 
     <!-- Help Text -->
-    <TextView
+    <com.oriondev.moneywallet.ui.view.theme.ThemedTextView
         android:id="@+id/help_text_view"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -49,7 +49,7 @@
         android:layout_marginEnd="32dp"
         android:gravity="center"
         android:text="@string/fingerprint_unlock_message"
-        android:textColor="@android:color/white"
+        app:theme_textColor="textOverColorPrimary"
         android:textSize="18sp"
         android:textStyle="bold"
         app:layout_constraintTop_toBottomOf="@+id/fingerprint_icon"
@@ -57,7 +57,7 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- Fingerprint Button -->
-    <Button
+    <com.oriondev.moneywallet.ui.view.theme.ThemedButton
         android:id="@+id/fingerprint_button"
         android:layout_width="0dp"
         android:layout_height="56dp"
@@ -66,7 +66,7 @@
         android:layout_marginEnd="32dp"
         android:background="@drawable/button_fingerprint_background"
         android:text="@string/fingerprint_unlock"
-        android:textColor="@android:color/white"
+        app:theme_backgroundColor="colorPrimary"
         android:textSize="16sp"
         android:textStyle="bold"
         app:layout_constraintTop_toBottomOf="@+id/help_text_view"
@@ -74,7 +74,7 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- Cancel Button -->
-    <Button
+    <com.oriondev.moneywallet.ui.view.theme.ThemedTextView
         android:id="@+id/cancel_button"
         android:layout_width="0dp"
         android:layout_height="48dp"
@@ -84,7 +84,10 @@
         android:layout_marginBottom="32dp"
         android:background="@android:color/transparent"
         android:text="@string/cancel"
-        android:textColor="@android:color/white"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        app:theme_textColor="textOverColorPrimary"
         android:textSize="14sp"
         app:layout_constraintTop_toBottomOf="@+id/fingerprint_button"
         app:layout_constraintStart_toStartOf="parent"
