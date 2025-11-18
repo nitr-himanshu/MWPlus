@@ -24,7 +24,11 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
@@ -32,9 +36,13 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.core.content.ContextCompat;
 
+import com.afollestad.materialdialogs.DialogAction;
+import com.afollestad.materialdialogs.MaterialDialog;
+import com.oriondev.moneywallet.R;
 import com.oriondev.moneywallet.api.BackendServiceFactory;
 import com.oriondev.moneywallet.model.LocalFile;
 import com.oriondev.moneywallet.ui.activity.BackendExplorerActivity;
+import com.oriondev.moneywallet.ui.view.theme.ThemedDialog;
 
 /**
  * Created by andrea on 01/02/18.
@@ -56,6 +64,7 @@ public class LocalFilePicker extends Fragment {
 
     private int mPickerMode;
     private LocalFile mCurrentFile;
+    private boolean mWaitingForPermission;
 
     public static LocalFilePicker createPicker(FragmentManager fragmentManager, String tag, int mode) {
         LocalFilePicker filePicker = (LocalFilePicker) fragmentManager.findFragmentByTag(tag);
@@ -127,15 +136,76 @@ public class LocalFilePicker extends Fragment {
             if (isPermissionGranted(activity)) {
                 startPicker(activity);
             } else {
-                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_PERMISSION);
+                requestStoragePermission(activity);
             }
         }
     }
 
     private boolean isPermissionGranted(Context context) {
-        String permission = Manifest.permission.WRITE_EXTERNAL_STORAGE;
-        int result = ContextCompat.checkSelfPermission(context, permission);
-        return result == PackageManager.PERMISSION_GRANTED;
+        // For Android 11 (API 30) and above, WRITE_EXTERNAL_STORAGE has limited functionality
+        // and apps should use MANAGE_EXTERNAL_STORAGE or scoped storage
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Check if we have all files access permission
+            return Environment.isExternalStorageManager();
+        } else {
+            // For Android 10 and below, check WRITE_EXTERNAL_STORAGE permission
+            String permission = Manifest.permission.WRITE_EXTERNAL_STORAGE;
+            int result = ContextCompat.checkSelfPermission(context, permission);
+            return result == PackageManager.PERMISSION_GRANTED;
+        }
+    }
+
+    private void requestStoragePermission(Activity activity) {
+        // For Android 11 (API 30) and above, we need to request MANAGE_EXTERNAL_STORAGE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            mWaitingForPermission = true;
+            // Show explanation dialog before redirecting to settings
+            ThemedDialog.buildMaterialDialog(activity)
+                    .title(R.string.title_request_permission)
+                    .content(R.string.message_permission_required_external_storage)
+                    .positiveText(android.R.string.ok)
+                    .negativeText(android.R.string.cancel)
+                    .onPositive(new MaterialDialog.SingleButtonCallback() {
+                        @Override
+                        public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
+                            try {
+                                // Redirect to settings to grant all files access
+                                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                                intent.setData(Uri.parse("package:" + activity.getPackageName()));
+                                startActivity(intent);
+                            } catch (Exception e) {
+                                // Fallback to general storage settings
+                                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                                startActivity(intent);
+                            }
+                        }
+                    })
+                    .onNegative(new MaterialDialog.SingleButtonCallback() {
+                        @Override
+                        public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
+                            mWaitingForPermission = false;
+                        }
+                    })
+                    .show();
+        } else {
+            // For Android 10 and below, request WRITE_EXTERNAL_STORAGE permission
+            if (ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                ThemedDialog.buildMaterialDialog(activity)
+                        .title(R.string.title_request_permission)
+                        .content(R.string.message_permission_required_external_storage)
+                        .positiveText(android.R.string.ok)
+                        .negativeText(android.R.string.cancel)
+                        .onPositive(new MaterialDialog.SingleButtonCallback() {
+                            @Override
+                            public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
+                                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_PERMISSION);
+                            }
+                        })
+                        .show();
+            } else {
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_PERMISSION);
+            }
+        }
     }
 
     private void startPicker(Context context) {
@@ -173,9 +243,28 @@ public class LocalFilePicker extends Fragment {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == REQUEST_PERMISSION) {
-            if (permissions[0].equals(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            if (permissions.length > 0 
+                    && permissions[0].equals(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    && grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startPicker(getActivity());
+                Activity activity = getActivity();
+                if (activity != null) {
+                    startPicker(activity);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Check if permission was granted after returning from settings (Android 11+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && mWaitingForPermission) {
+            Activity activity = getActivity();
+            if (activity != null && isPermissionGranted(activity)) {
+                // Permission was granted, start the picker
+                mWaitingForPermission = false;
+                startPicker(activity);
             }
         }
     }
