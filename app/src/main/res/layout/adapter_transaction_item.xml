@@ -62,7 +62,7 @@
         app:theme_textColor="textColorPrimary"
         tools:text="This is the primary text" />
 
-    <TextView
+    <com.oriondev.moneywallet.ui.view.theme.ThemedTextView
         android:id="@+id/money_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -71,6 +71,7 @@
         android:textSize="@dimen/material_component_lists_two_line_with_avatar_primary_text_size"
         app:layout_constraintBottom_toTopOf="@+id/text_guideline"
         app:layout_constraintEnd_toEndOf="parent"
+        app:theme_textColor="textColorPrimary"
         tools:text="€ 500.00" />
 
     <com.oriondev.moneywallet.ui.view.theme.ThemedTextView

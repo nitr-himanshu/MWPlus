@@ -41,7 +41,6 @@ import java.util.concurrent.Executor;
 
 /**
  * Created by andrea on 24/07/18.
- * Updated to use Android Biometric API for fingerprint authentication.
  */
 public class LockActivity extends ThemedActivity {
 
@@ -123,7 +122,7 @@ public class LockActivity extends ThemedActivity {
 
     private TextView mHelpTextView;
     private Button mFingerprintButton;
-    private Button mCancelButton;
+    private TextView mCancelButton;
 
     private Executor executor;
     private BiometricPrompt biometricPrompt;

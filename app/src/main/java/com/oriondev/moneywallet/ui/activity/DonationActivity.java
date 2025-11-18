@@ -25,6 +25,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -34,6 +35,7 @@ import androidx.loader.content.Loader;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ScrollView;
@@ -41,6 +43,7 @@ import android.widget.ScrollView;
 import com.oriondev.moneywallet.R;
 import com.oriondev.moneywallet.background.JsonResourceLoader;
 import com.oriondev.moneywallet.ui.activity.base.SinglePanelActivity;
+import com.oriondev.moneywallet.ui.view.theme.ITheme;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -213,5 +216,39 @@ public class DonationActivity extends SinglePanelActivity implements LoaderManag
     @Override
     public void onLoaderReset(@NonNull Loader<JSONObject> loader) {
         // do nothing
+    }
+
+    @Override
+    protected void onThemeStatusBarIcons(ITheme theme) {
+        super.onThemeStatusBarIcons(theme);
+        // Ensure status bar is always visible
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            View decorView = getWindow().getDecorView();
+            int systemUiVisibility = decorView.getSystemUiVisibility();
+            // Remove any flags that might hide the status bar
+            systemUiVisibility &= ~View.SYSTEM_UI_FLAG_FULLSCREEN;
+            systemUiVisibility &= ~View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+            systemUiVisibility &= ~View.SYSTEM_UI_FLAG_IMMERSIVE;
+            systemUiVisibility &= ~View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+            decorView.setSystemUiVisibility(systemUiVisibility);
+            // Ensure window doesn't have fullscreen flag
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Ensure status bar is visible after resume
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            View decorView = getWindow().getDecorView();
+            int systemUiVisibility = decorView.getSystemUiVisibility();
+            systemUiVisibility &= ~View.SYSTEM_UI_FLAG_FULLSCREEN;
+            systemUiVisibility &= ~View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+            systemUiVisibility &= ~View.SYSTEM_UI_FLAG_IMMERSIVE;
+            systemUiVisibility &= ~View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+            decorView.setSystemUiVisibility(systemUiVisibility);
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
     }
 }

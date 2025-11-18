@@ -49,7 +49,6 @@
         android:maxLength="2"
         android:maxLines="1"
         android:singleLine="true"
-        android:textColor="#FFFFFF"
         android:textSize="@dimen/view_mti_timeline_lbl_date_text"
         tools:text="25"/>
 

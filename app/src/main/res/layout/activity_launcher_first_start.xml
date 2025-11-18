@@ -65,19 +65,21 @@
                 android:textSize="@dimen/activity_launcher_first_start_content_text_size"
                 app:theme_textColor="textColorSecondary" />
 
-            <Button
+            <com.oriondev.moneywallet.ui.view.theme.ThemedButton
                 android:id="@+id/first_start_button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/activity_launcher_first_start_layout_button_margin_top"
-                android:text="@string/activity_launcher_first_start_button_first_time" />
+                android:text="@string/activity_launcher_first_start_button_first_time"
+                app:theme_backgroundColor="colorPrimary" />
 
-            <Button
+            <com.oriondev.moneywallet.ui.view.theme.ThemedButton
                 android:id="@+id/restore_backup_button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/activity_launcher_first_start_layout_button_margin_bottom"
-                android:text="@string/activity_launcher_first_start_button_restore_backup" />
+                android:text="@string/activity_launcher_first_start_button_restore_backup"
+                app:theme_backgroundColor="colorPrimary" />
 
         </LinearLayout>
 

@@ -39,6 +39,7 @@ import com.oriondev.moneywallet.ui.fragment.base.MultiPanelFragment;
 import com.oriondev.moneywallet.ui.fragment.secondary.DatabaseSettingFragment;
 import com.oriondev.moneywallet.ui.fragment.secondary.UserInterfaceSettingFragment;
 import com.oriondev.moneywallet.ui.fragment.secondary.UtilitySettingFragment;
+import com.oriondev.moneywallet.ui.view.theme.ThemeEngine;
 
 /**
  * Created by andrea on 03/03/18.
@@ -90,6 +91,8 @@ public class SettingMultiPanelFragment extends MultiPanelFragment implements Set
 
             });
         }
+        // Force theme application to ensure colors are applied to the entire secondary panel
+        ThemeEngine.applyTheme(view, true);
         if (savedInstanceState != null) {
             mCurrentId = savedInstanceState.getInt(SS_CURRENT_ID, ID_USER_INTERFACE);
         }
